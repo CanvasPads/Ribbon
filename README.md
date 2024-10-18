@@ -1,4 +1,4 @@
-# GuiQL - A query language for building user interfaces.
+# Shigure - A query language for building user interfaces.
 
 ## Getting started
 
