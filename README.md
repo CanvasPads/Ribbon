@@ -1,4 +1,4 @@
-# Shigure - A query language for building user interfaces.
+# Shigure - A programming language for building user interfaces.
 
 ## Getting started
 
