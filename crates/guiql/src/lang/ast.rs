@@ -1,24 +1,46 @@
+/// A location information for AST nodes.
 #[derive(Eq, PartialEq, Clone, Copy, Debug)]
-pub struct ASTItemLoc {
-    pub starts_at: u32,
-    pub len: u32,
+pub struct ASTLoc {
+    pub start: u32,
+    pub end: u32,
 }
 
-#[derive(Eq, PartialEq, Clone, Debug, Default)]
-pub struct CreateQuery {
-    pub elm_name: String,
-    pub view: ViewRoot,
+/// A node that has [`ASTLoc`] in own member.
+pub(crate) trait ASTHasLoc {
+    fn loc(&self) -> ASTLoc;
 }
 
-#[derive(Eq, PartialEq, Clone, Debug, Default)]
-pub struct ReplaceQuery {}
+pub struct ASTNodeViewElement {
+    loc: ASTLoc,
+}
 
-#[derive(Eq, PartialEq, Clone, Debug, Default)]
-pub struct ViewRoot {}
+impl ASTHasLoc for ASTNodeViewElement {
+    fn loc(&self) -> ASTLoc {
+        self.loc
+    }
+}
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub struct Module {
+pub struct ASTItemConst {}
+
+/// AST nodes that possibly placement in a block
+#[derive(Eq, PartialEq, Clone, Debug)]
+pub enum ASTNodeScoped {
+    Const(ASTItemConst),
+}
+
+/// A module node
+#[derive(Eq, PartialEq, Clone, Debug)]
+pub struct ASTNodeModule {
+    loc: ASTLoc,
     pub name: String,
+    pub nodes: Vec<ASTNodeScoped>,
+}
+
+impl ASTHasLoc for ASTNodeModule {
+    fn loc(&self) -> ASTLoc {
+        self.loc
+    }
 }
 
 #[derive(Eq, PartialEq, Clone, Copy, Debug)]
@@ -28,18 +50,42 @@ pub struct TokenLoc {
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
+pub enum TokenLiteral {
+    NumberLiteral(String),
+    StringLiteral(String),
+}
+
+impl TokenLiteral {
+    pub(crate) fn content(&self) -> &String {
+        match self {
+            TokenLiteral::NumberLiteral(s) => s,
+            TokenLiteral::StringLiteral(s) => s,
+        }
+    }
+}
+
+#[derive(Eq, PartialEq, Clone, Debug)]
 pub enum TokenContent {
     Anchor(String),
     Identifier(String),
-    NumberLiteral(String),
-    StringLiteral(String),
+    Literal(TokenLiteral),
+    VTagStartPre { name: String },  // <tag-name
+    VTagStartPost { name: String }, // </tag-name
+    VTagSelfClosing,                // />
+    VTagAttrName(String),           // [[name]]: Type = "value"
+    VTagEnd,                        // >
     BraceLeft,
     BraceRight,
+    AddOp,
+    AssignmentOp,
+    BitwiseAndOp,
     Create,
+    Const,
     Delete,
     Else,
     Enum,
     FromKeyword,
+    FnKeyword,
     For,
     If,
     Int,
@@ -47,13 +93,15 @@ pub enum TokenContent {
     Key,
     Let,
     New,
+    Nil,
     Number,
     StringKeyword,
     Tag,
     Type,
+    View,
     With,
     Or,
-    Pub,
+    Priv,
     Replace,
 }
 
@@ -61,6 +109,7 @@ impl TokenContent {
     pub fn from_str(word: &str) -> Option<Self> {
         match word.to_lowercase().as_str() {
             "create" => Some(Self::Create),
+            "const" => Some(Self::Const),
             "delete" => Some(Self::Delete),
             "else" => Some(Self::Else),
             "enum" => Some(Self::Enum),
@@ -78,7 +127,7 @@ impl TokenContent {
             "type" => Some(Self::Type),
             "with" => Some(Self::With),
             "or" => Some(Self::Or),
-            "pub" => Some(Self::Pub),
+            "priv" => Some(Self::Priv),
             "replace" => Some(Self::Replace),
             _ => None,
         }
@@ -88,6 +137,7 @@ impl TokenContent {
         match c {
             '{' => Some(Self::BraceLeft),
             '}' => Some(Self::BraceRight),
+            '=' => Some(Self::AssignmentOp),
             _ => None,
         }
     }
