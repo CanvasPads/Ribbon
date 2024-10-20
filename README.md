@@ -1,5 +1,7 @@
-# Shigure - A programming language for building user interfaces.
+# ☔ 🎨 Shigure
 
-## Getting started
+Shigure is a programming language for building user interfaces.
 
-See the [documentation](https://docs.guiql.com) or try on [playground](https://guiql.com).
+## ✨ Getting started
+
+See the [documentation](https://docs.shigure.app) or try on [playground](https://try.shigure.app).
