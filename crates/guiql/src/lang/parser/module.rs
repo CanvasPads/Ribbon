@@ -1,9 +1,8 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use crate::lang::ast::{CreateQuery, Module, TokenContent, ViewRoot};
+use crate::lang::ast::{ASTLoc, ASTNodeModule, ASTNodeViewElement, TokenContent};
 use crate::lang::parser::{view::ViewParser, ParseError, ParseResult, Parser, TokenizeResult};
 use crate::lang::tokenizer::{TokenResult, Tokenizer};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 enum ModuleParserState {
@@ -34,17 +33,17 @@ impl ModuleParserState {
 pub struct ModuleParser<'a> {
     tokenizer: Rc<RefCell<Tokenizer<'a>>>,
     state: RefCell<ModuleParserState>,
-    pending: RefCell<Option<Module>>,
+    pending: RefCell<Option<ASTNodeModule>>,
 }
 
 pub enum ModuleParserResult {
     Continue,
     ParseError(ParseError),
-    Done(Module),
+    Done(ASTNodeModule),
 }
 
-impl<'a> Parser<Module> for ModuleParser<'a> {
-    fn parse_all(&self) -> ParseResult<Module> {
+impl<'a> Parser<ASTNodeModule> for ModuleParser<'a> {
+    fn parse_all(&self) -> ParseResult<ASTNodeModule> {
         loop {
             match self.advance() {
                 ModuleParserResult::Done(ast) => return Ok(ast),
@@ -93,22 +92,8 @@ impl<'a> ModuleParser<'a> {
         }
     }
 
-    fn parse_view(&self) -> ParseResult<ViewRoot> {
+    fn parse_view(&self) -> ParseResult<ASTNodeViewElement> {
         ViewParser::new(self.tokenizer.clone()).parse_all()
-    }
-
-    fn parse_create(&self) -> ParseResult<CreateQuery> {
-        let mut query = CreateQuery::default();
-
-        let tok = self.consume_token_or_err()?;
-        if let TokenContent::Identifier(elm_name) = tok.con {
-            query.elm_name = elm_name;
-            query.view = self.parse_view()?;
-
-            return Ok(query);
-        };
-
-        Err(ParseError::UnexpectedToken)
     }
 
     fn parse_token(&self, res: TokenResult) {

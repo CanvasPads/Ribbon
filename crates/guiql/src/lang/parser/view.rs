@@ -1,12 +1,10 @@
-use std::{cell::RefCell, rc::Rc};
-
+use super::Parser;
 use crate::lang::{
-    ast::ViewRoot,
+    ast::{ASTNodeViewElement, TokenContent},
     parser::{ParseError, ParseResult},
     tokenizer::{TokenResult, Tokenizer},
 };
-
-use super::Parser;
+use std::{cell::RefCell, rc::Rc};
 
 pub enum ViewParserResult {
     Continue,
@@ -35,16 +33,16 @@ impl ViewParserState {
 pub struct ViewParser<'a> {
     tokenizer: Rc<RefCell<Tokenizer<'a>>>,
     state: RefCell<ViewParserState>,
-    pending: RefCell<Option<ViewRoot>>,
+    pending: RefCell<Option<ASTNodeViewElement>>,
 }
 
-impl<'a> Parser<ViewRoot> for ViewParser<'a> {
-    fn parse_all(&self) -> ParseResult<ViewRoot> {
+impl<'a> Parser<ASTNodeViewElement> for ViewParser<'a> {
+    fn parse_all(&self) -> ParseResult<ASTNodeViewElement> {
         loop {
             match self.advance() {
                 ViewParserResult::ParseError(err) => return Err(err),
                 ViewParserResult::Done => {
-                    return Ok(self.pending.take().expect("No pending result"))
+                    return Ok(self.pending.take().expect("No pending result"));
                 }
                 _ => {}
             }
@@ -61,7 +59,35 @@ impl<'a> ViewParser<'a> {
         }
     }
 
-    fn parse_token(&self, res: TokenResult) {}
+    fn parse_xml_tag(&self) -> ParseResult<ASTNodeViewElement> {
+        todo!()
+    }
+
+    fn set_pending_err(&self, err: ParseError) {
+        assert!(self
+            .state
+            .replace(ViewParserState::PendingParseError(err))
+            .is_ready());
+    }
+
+    fn set_state_from_parse_result<T>(&self, res: ParseResult<T>) {
+        if let Err(err) = res {
+            self.set_pending_err(err);
+        }
+    }
+
+    fn parse_token(&self, res: TokenResult) {
+        match res {
+            Ok(token) => match token.con {
+                TokenContent::VTagStartPre { .. } => {
+                    let res = self.parse_xml_tag();
+                    self.set_state_from_parse_result(res);
+                }
+                _ => self.set_pending_err(ParseError::UnexpectedToken),
+            },
+            Err(err) => self.set_pending_err(ParseError::TokenizeError(err)),
+        }
+    }
 
     fn advance(&self) -> ViewParserResult {
         type State = ViewParserState;
