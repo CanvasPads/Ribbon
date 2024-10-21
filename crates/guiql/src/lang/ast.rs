@@ -21,12 +21,41 @@ impl ASTHasLoc for ASTNodeViewElement {
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
-pub struct ASTItemConst {}
+pub struct ASTItemConst {
+    loc: ASTLoc,
+}
+
+impl ASTHasLoc for ASTItemConst {
+    fn loc(&self) -> ASTLoc {
+        self.loc
+    }
+}
+
+#[derive(Eq, PartialEq, Clone, Debug)]
+pub struct ASTItemView {
+    loc: ASTLoc,
+}
+
+impl ASTHasLoc for ASTItemView {
+    fn loc(&self) -> ASTLoc {
+        self.loc
+    }
+}
 
 /// AST nodes that possibly placement in a block
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum ASTNodeScoped {
     Const(ASTItemConst),
+    View(ASTItemView),
+}
+
+impl ASTHasLoc for ASTNodeScoped {
+    fn loc(&self) -> ASTLoc {
+        match self {
+            ASTNodeScoped::Const(i) => i.loc(),
+            ASTNodeScoped::View(i) => i.loc(),
+        }
+    }
 }
 
 /// A module node
@@ -66,79 +95,108 @@ impl TokenLiteral {
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum TokenContent {
+    /// `#anchor`
     Anchor(String),
+    /// `variable_name, function_name, CONSTANT_VALUE, ObjectName`
     Identifier(String),
+    /// `"hello, world", 1, 0xdeadbeef`
     Literal(TokenLiteral),
-    VTagStartPre { name: String },  // <tag-name
-    VTagStartPost { name: String }, // </tag-name
-    VTagSelfClosing,                // />
-    VTagAttrName(String),           // [[name]]: Type = "value"
-    VTagEnd,                        // >
+    /// `(`
+    ParenthesisLeft,
+    /// `)`
+    ParenthesisRight,
+    /// `{`
     BraceLeft,
+    /// `{`
     BraceRight,
+    /// `<`
+    TagAngleBracketLeft,
+    /// `/>`
+    TagAngleSelfClosingRight,
+    /// `>`
+    TagAngleBracketRight,
+    /// `+`
     AddOp,
+    /// `=`
     AssignmentOp,
+    /// `&`
     BitwiseAndOp,
-    Create,
+    /// as
+    As,
+    /// `const`
     Const,
-    Delete,
+    /// `effect`
+    Effect,
+    /// `else`
     Else,
-    Enum,
-    FromKeyword,
+    /// `emits`
+    Emits,
+    /// `fn`
     FnKeyword,
+    /// `for`
     For,
+    /// `from`
+    FromKeyword,
+    /// `if`
     If,
-    Int,
-    Insert,
-    Key,
+    /// `import`
+    Import,
+    /// `let`
     Let,
-    New,
+    /// `nil`
     Nil,
-    Number,
-    StringKeyword,
-    Tag,
+    /// `type`
     Type,
+    /// `use`
+    Use,
+    /// `view`
     View,
+    /// `when`
+    When,
+    /// `with`
     With,
-    Or,
-    Priv,
-    Replace,
+    /// `pub`
+    Pub,
 }
 
-impl TokenContent {
-    pub fn from_str(word: &str) -> Option<Self> {
-        match word.to_lowercase().as_str() {
-            "create" => Some(Self::Create),
-            "const" => Some(Self::Const),
-            "delete" => Some(Self::Delete),
-            "else" => Some(Self::Else),
-            "enum" => Some(Self::Enum),
-            "from" => Some(Self::FromKeyword),
-            "for" => Some(Self::For),
-            "if" => Some(Self::If),
-            "int" => Some(Self::Int),
-            "insert" => Some(Self::Insert),
-            "key" => Some(Self::Key),
-            "let" => Some(Self::Let),
-            "new" => Some(Self::New),
-            "number" => Some(Self::Number),
-            "string" => Some(Self::StringKeyword),
-            "tag" => Some(Self::Tag),
-            "type" => Some(Self::Type),
-            "with" => Some(Self::With),
-            "or" => Some(Self::Or),
-            "priv" => Some(Self::Priv),
-            "replace" => Some(Self::Replace),
-            _ => None,
+impl TryFrom<&str> for TokenContent {
+    type Error = ();
+    fn try_from(word: &str) -> Result<Self, Self::Error> {
+        match word {
+            "/>" => Ok(Self::TagAngleSelfClosingRight),
+            "as" => Ok(Self::As),
+            "const" => Ok(Self::Const),
+            "effect" => Ok(Self::Effect),
+            "else" => Ok(Self::Else),
+            "emits" => Ok(Self::Emits),
+            "fn" => Ok(Self::FnKeyword),
+            "for" => Ok(Self::For),
+            "from" => Ok(Self::FromKeyword),
+            "if" => Ok(Self::If),
+            "import" => Ok(Self::Import),
+            "let" => Ok(Self::Let),
+            "nil" => Ok(Self::Nil),
+            "type" => Ok(Self::Type),
+            "use" => Ok(Self::Use),
+            "view" => Ok(Self::View),
+            "when" => Ok(Self::When),
+            "with" => Ok(Self::With),
+            "pub" => Ok(Self::Pub),
+            _ => Err(()),
         }
     }
+}
 
-    pub fn from_char(c: char) -> Option<Self> {
+impl TryFrom<char> for TokenContent {
+    type Error = ();
+    fn try_from(c: char) -> Result<Self, Self::Error> {
         match c {
-            '{' => Some(Self::BraceLeft),
-            '}' => Some(Self::BraceRight),
-            '=' => Some(Self::AssignmentOp),
-            _ => None,
+            '(' => Ok(Self::ParenthesisLeft),
+            ')' => Ok(Self::ParenthesisRight),
+            '{' => Ok(Self::BraceLeft),
+            '}' => Ok(Self::BraceRight),
+            '=' => Ok(Self::AssignmentOp),
+            _ => Err(()),
         }
     }
 }
@@ -148,23 +206,3 @@ pub struct Token {
     pub loc: TokenLoc,
     pub con: TokenContent,
 }
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct NodeLoc {
-    start: u32,
-    end: u32,
-}
-
-pub trait Node {
-    fn loc(&mut self) -> NodeLoc;
-    fn set_loc(&mut self, loc: NodeLoc);
-}
-
-pub trait HasChildren {
-    fn append_child<T: Node>(&mut self, node: T);
-    fn children(&mut self) -> Vec<Box<dyn Node>>;
-}
-
-pub trait Query: Node {}
-
-pub trait Scope: Node + HasChildren {}
