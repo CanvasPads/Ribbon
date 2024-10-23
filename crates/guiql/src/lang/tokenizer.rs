@@ -52,7 +52,7 @@ impl<'a> Tokenizer<'a> {
         loc.len = len;
         Ok(Token {
             loc,
-            con: TokenContent::NumberLiteral(literal),
+            con: TokenContent::Literal(TokenLiteral::NumberLiteral(literal)),
         })
     }
 
@@ -62,25 +62,25 @@ impl<'a> Tokenizer<'a> {
             starts_at: self.current_idx,
             len: 0,
         };
+
         let mut quotation_mark_count = 0;
-        while let Some(&c) = self.itr.peek() {
-            literal.push(c);
-            self.advance();
-            loc.len += 1;
+        while let Some(c) = self.next_char() {
             if c == '\"' {
                 if quotation_mark_count >= 2 {
                     break;
                 }
                 quotation_mark_count += 1;
             }
+            literal.push(c);
         }
 
         if quotation_mark_count < 2 {
             Err(TokenizerErr::UnterminatedStringLiteral)
         } else {
+            loc.len = self.current_idx - loc.starts_at + 1;
             Ok(Token {
                 loc,
-                con: TokenContent::StringLiteral(literal),
+                con: TokenContent::Literal(TokenLiteral::StringLiteral(literal)),
             })
         }
     }
@@ -91,12 +91,11 @@ impl<'a> Tokenizer<'a> {
             starts_at: self.current_idx,
             len: 0,
         };
-        while let Some(&c) = self.itr.peek() {
+        while let Some(c) = self.next_char() {
             if c.is_alphabetic() {
-                self.advance();
-                loc.len += 1;
                 word.push(c);
-                if let Some(con) = TokenContent::from_str(word.as_str()) {
+                if let Ok(con) = TokenContent::try_from(word.as_str()) {
+                    loc.len = self.current_idx - loc.starts_at + 1;
                     return Some(Ok(Token { loc, con }));
                 };
             } else {
@@ -145,9 +144,10 @@ impl<'a> Tokenizer<'a> {
             }
 
             word.push(c);
-            loc.len += 1;
-            self.itr.next();
+            self.advance();
         }
+
+        loc.len = self.current_idx - loc.starts_at + 1;
 
         Ok(Token {
             loc,
@@ -205,19 +205,23 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
+    fn peek(&mut self) -> Option<&char> {
+        self.itr.peek()
+    }
+
     fn advance(&mut self) {
         self.next_char();
     }
 
-    fn next_char(&mut self) {
-        self.itr.next();
-
+    fn next_char(&mut self) -> Option<char> {
         self.current_idx += 1;
 
         if self.current_idx == MAX_IDX_VALUE {
             self.full_idx_count += 1;
             self.current_idx = 0;
         }
+
+        self.itr.next()
     }
 
     fn set_pending(&mut self, token: Token) -> TokenizationResult {
@@ -232,7 +236,7 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn dispatch_char(&mut self, c: char) -> TokenizationResult {
+    fn tokenize_char(&mut self, c: char) -> TokenizationResult {
         match c {
             'a'..='z' | 'A'..='Z' => {
                 let res = self.lex_alphabetical_chars();
@@ -241,6 +245,39 @@ impl<'a> Tokenizer<'a> {
             '0'..='9' => {
                 let res = self.lex_number_literal();
                 self.set_pending_or_err(res)
+            }
+            '<' => {
+                // ViewElement starting tag
+                let loc = TokenLoc {
+                    starts_at: self.current_idx,
+                    len: 1,
+                };
+                let con = TokenContent::TagAngleBracketLeft;
+
+                self.set_pending(Token { loc, con })
+            }
+            '>' => {
+                // ViewElement starting tag
+                let loc = TokenLoc {
+                    starts_at: self.current_idx,
+                    len: 1,
+                };
+                let con = TokenContent::TagAngleBracketRight;
+
+                self.set_pending(Token { loc, con })
+            }
+            '/' => {
+                // Self-closing ViewElement tag
+                if let Some('>') = self.next_char() {
+                    let loc = TokenLoc {
+                        starts_at: self.current_idx,
+                        len: 2,
+                    };
+                    let con = TokenContent::TagAngleSelfClosingRight;
+                    self.set_pending(Token { loc, con })
+                } else {
+                    Err(TokenizerErr::UnexpectedToken)
+                }
             }
             '"' => {
                 let res = self.lex_string_literal();
@@ -261,7 +298,7 @@ impl<'a> Tokenizer<'a> {
                 continue;
             }
 
-            match self.dispatch_char(c) {
+            match self.tokenize_char(c) {
                 Ok(..) => {
                     if let Some(token) = self.pending.take() {
                         return Some(Ok(token));
@@ -273,15 +310,6 @@ impl<'a> Tokenizer<'a> {
                     return Some(Err(err));
                 }
             }
-            /*else if c.is_digit(10) {
-                return Some(self.lex_number_literal());
-            } else if c.is_alphabetic() {
-                return Some(self.lex_alphabetical_chars());
-            } else if c == '"' {
-                return Some(self.lex_string_literal());
-            } else if c == '@' {
-                return Some(self.lex_element_identifier());
-            }*/
         }
         None
     }
@@ -291,13 +319,20 @@ impl<'a> Tokenizer<'a> {
 mod test {
     use super::*;
 
-    struct QueryTest<'a> {
+    struct Tester<'a> {
         name: &'a str,
         expected: Vec<Token>,
         query: &'a str,
     }
 
-    impl<'a> QueryTest<'a> {
+    enum TesterErr {
+        TokenizerError,
+        UnexpectedToken,
+    }
+
+    type TesterResult = Result<(), TesterErr>;
+
+    impl<'a> Tester<'a> {
         pub fn new(name: &'a str, expected: Vec<Token>, query: &'a str) -> Self {
             Self {
                 name,
@@ -306,7 +341,7 @@ mod test {
             }
         }
 
-        pub fn run(&self) -> QueryTestResult {
+        pub fn run(&self) -> TesterResult {
             let mut tokenizer = Tokenizer::new(self.query);
             let mut i: usize = 0;
             while let Some(token) = tokenizer.next() {
@@ -314,7 +349,7 @@ mod test {
                     Ok(token) => {
                         if token != self.expected[i] {
                             println!("{}: Failed with unexpected token\n- Expected:\n{:?}\n- Result:\n{:?}", self.name, self.expected[i], token);
-                            return Err(QueryTestErr::UnexpectedToken);
+                            return Err(TesterErr::UnexpectedToken);
                         }
                     }
                     Err(err) => {
@@ -322,7 +357,7 @@ mod test {
                             "{}: Failed with tokenizer error\n- Error:\n{:?}",
                             self.name, err
                         );
-                        return Err(QueryTestErr::TokenizerError);
+                        return Err(TesterErr::TokenizerError);
                     }
                 }
                 i += 1;
@@ -332,23 +367,16 @@ mod test {
         }
     }
 
-    enum QueryTestErr {
-        TokenizerError,
-        UnexpectedToken,
+    struct MultiTester<'a> {
+        tests: Vec<Tester<'a>>,
     }
 
-    type QueryTestResult = Result<(), QueryTestErr>;
-
-    struct QueryTester<'a> {
-        tests: Vec<QueryTest<'a>>,
-    }
-
-    impl<'a> QueryTester<'a> {
+    impl<'a> MultiTester<'a> {
         pub fn new() -> Self {
             Self { tests: Vec::new() }
         }
 
-        pub fn add_test(&mut self, test: QueryTest<'a>) {
+        pub fn add_test(&mut self, test: Tester<'a>) {
             self.tests.push(test);
         }
 
@@ -361,14 +389,14 @@ mod test {
 
     #[test]
     fn decimal_digits() {
-        assert!(QueryTest::new(
+        assert!(Tester::new(
             "numeric literals",
             vec![Token {
                 loc: TokenLoc {
                     starts_at: 0,
                     len: 2,
                 },
-                con: TokenContent::NumberLiteral("91".to_string()),
+                con: TokenContent::Literal(TokenLiteral::NumberLiteral("91".to_string())),
             }],
             "91",
         )
@@ -378,7 +406,7 @@ mod test {
 
     #[test]
     fn multiple_tokens() {
-        assert!(QueryTest::new(
+        assert!(Tester::new(
             "multiple tokens",
             vec![
                 Token {
@@ -393,7 +421,7 @@ mod test {
                         starts_at: 2,
                         len: 2,
                     },
-                    con: TokenContent::NumberLiteral("91".to_string()),
+                    con: TokenContent::Literal(TokenLiteral::NumberLiteral("91".to_string())),
                 }
             ],
             "x 91",
@@ -404,14 +432,16 @@ mod test {
 
     #[test]
     fn string_literal() {
-        assert!(QueryTest::new(
+        assert!(Tester::new(
             "string literal",
             vec![Token {
                 loc: TokenLoc {
                     starts_at: 0,
                     len: 14,
                 },
-                con: TokenContent::StringLiteral("\"hello, world\"".to_string()),
+                con: TokenContent::Literal(TokenLiteral::StringLiteral(
+                    "\"hello, world\"".to_string()
+                )),
             }],
             "\"hello, world\"",
         )
@@ -421,40 +451,40 @@ mod test {
 
     #[test]
     fn lex_queries() {
-        let mut tester = QueryTester::new();
-        tester.add_test(QueryTest::new(
-            "create query",
+        let mut tester = MultiTester::new();
+        tester.add_test(Tester::new(
+            "view",
             vec![
                 Token {
                     loc: TokenLoc {
                         starts_at: 0,
-                        len: 5,
+                        len: 1,
                     },
-                    con: TokenContent::Anchor("#root".to_string()),
+                    con: TokenContent::TagAngleBracketLeft,
                 },
                 Token {
                     loc: TokenLoc {
-                        starts_at: 6,
-                        len: 6,
-                    },
-                    con: TokenContent::Insert,
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 13,
-                        len: 3,
-                    },
-                    con: TokenContent::New,
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 17,
+                        starts_at: 1,
                         len: 7,
                     },
-                    con: TokenContent::Identifier("Element".to_string()),
+                    con: TokenContent::Identifier("Element".into()),
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 8,
+                        len: 7,
+                    },
+                    con: TokenContent::Anchor("Anchor".into()),
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 16,
+                        len: 2,
+                    },
+                    con: TokenContent::TagAngleSelfClosingRight,
                 },
             ],
-            "#root insert new Element",
+            "<Element#anchor />",
         ));
 
         tester.run_all();

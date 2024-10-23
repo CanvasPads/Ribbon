@@ -1,58 +1,21 @@
-use std::cell::RefCell;
+use crate::lang::ast::Token;
+use crate::lang::tokenizer::TokenizerErr;
 
-use crate::lang::tokenizer::{TokenResult, Tokenizer};
+pub mod module;
+pub mod view;
 
-#[derive(Debug, Default, Clone, Eq, PartialEq)]
-enum ParserState {
-    PendingToken(TokenResult),
-    EOF,
-    #[default]
-    Ready,
+pub trait Parser<T> {
+    fn parse_all(&self) -> ParseResult<T>;
 }
 
-impl ParserState {
-    pub fn is_ready(&self) -> bool {
-        match self {
-            ParserState::Ready => true,
-            _ => false,
-        }
-    }
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum ParseError {
+    /// The token type is unexpected.
+    UnexpectedToken,
+    /// Incorrect syntax
+    SyntaxError,
+    TokenizeError(TokenizerErr),
 }
 
-pub struct Parser<'a> {
-    tokenizer: Tokenizer<'a>,
-    state: RefCell<ParserState>,
-}
-
-impl<'a> Parser<'a> {
-    pub fn new(tokenizer: Tokenizer<'a>) -> Self {
-        Self {
-            tokenizer,
-            state: RefCell::new(ParserState::default()),
-        }
-    }
-
-    pub fn from_str(input: &'a str) -> Self {
-        Self::new(Tokenizer::new(input))
-    }
-
-    pub fn parse_all(&mut self) {
-        self.advance();
-    }
-
-    fn advance(&mut self) {
-        match self.tokenizer.next() {
-            Some(res) => {
-                assert!(self
-                    .state
-                    .replace(ParserState::PendingToken(res))
-                    .is_ready());
-            }
-            None => {
-                assert!(self.state.replace(ParserState::EOF).is_ready());
-            }
-        }
-    }
-
-    pub fn next() {}
-}
+pub type ParseResult<T> = Result<T, ParseError>;
+type TokenizeResult = Result<Token, ParseError>;
