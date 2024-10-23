@@ -208,6 +208,7 @@ impl<'a> Tokenizer<'a> {
     fn peek(&mut self) -> Option<&char> {
         self.itr.peek()
     }
+
     fn advance(&mut self) {
         self.next_char();
     }
@@ -244,6 +245,39 @@ impl<'a> Tokenizer<'a> {
             '0'..='9' => {
                 let res = self.lex_number_literal();
                 self.set_pending_or_err(res)
+            }
+            '<' => {
+                // ViewElement starting tag
+                let loc = TokenLoc {
+                    starts_at: self.current_idx,
+                    len: 1,
+                };
+                let con = TokenContent::TagAngleBracketLeft;
+
+                self.set_pending(Token { loc, con })
+            }
+            '>' => {
+                // ViewElement starting tag
+                let loc = TokenLoc {
+                    starts_at: self.current_idx,
+                    len: 1,
+                };
+                let con = TokenContent::TagAngleBracketRight;
+
+                self.set_pending(Token { loc, con })
+            }
+            '/' => {
+                // Self-closing ViewElement tag
+                if let Some('>') = self.next_char() {
+                    let loc = TokenLoc {
+                        starts_at: self.current_idx,
+                        len: 2,
+                    };
+                    let con = TokenContent::TagAngleSelfClosingRight;
+                    self.set_pending(Token { loc, con })
+                } else {
+                    Err(TokenizerErr::UnexpectedToken)
+                }
             }
             '"' => {
                 let res = self.lex_string_literal();
