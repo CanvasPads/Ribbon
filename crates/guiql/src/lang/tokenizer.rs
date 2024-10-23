@@ -319,13 +319,20 @@ impl<'a> Tokenizer<'a> {
 mod test {
     use super::*;
 
-    struct QueryTest<'a> {
+    struct Tester<'a> {
         name: &'a str,
         expected: Vec<Token>,
         query: &'a str,
     }
 
-    impl<'a> QueryTest<'a> {
+    enum TesterErr {
+        TokenizerError,
+        UnexpectedToken,
+    }
+
+    type TesterResult = Result<(), TesterErr>;
+
+    impl<'a> Tester<'a> {
         pub fn new(name: &'a str, expected: Vec<Token>, query: &'a str) -> Self {
             Self {
                 name,
@@ -334,7 +341,7 @@ mod test {
             }
         }
 
-        pub fn run(&self) -> QueryTestResult {
+        pub fn run(&self) -> TesterResult {
             let mut tokenizer = Tokenizer::new(self.query);
             let mut i: usize = 0;
             while let Some(token) = tokenizer.next() {
@@ -342,7 +349,7 @@ mod test {
                     Ok(token) => {
                         if token != self.expected[i] {
                             println!("{}: Failed with unexpected token\n- Expected:\n{:?}\n- Result:\n{:?}", self.name, self.expected[i], token);
-                            return Err(QueryTestErr::UnexpectedToken);
+                            return Err(TesterErr::UnexpectedToken);
                         }
                     }
                     Err(err) => {
@@ -350,7 +357,7 @@ mod test {
                             "{}: Failed with tokenizer error\n- Error:\n{:?}",
                             self.name, err
                         );
-                        return Err(QueryTestErr::TokenizerError);
+                        return Err(TesterErr::TokenizerError);
                     }
                 }
                 i += 1;
@@ -360,23 +367,16 @@ mod test {
         }
     }
 
-    enum QueryTestErr {
-        TokenizerError,
-        UnexpectedToken,
+    struct MultiTester<'a> {
+        tests: Vec<Tester<'a>>,
     }
 
-    type QueryTestResult = Result<(), QueryTestErr>;
-
-    struct QueryTester<'a> {
-        tests: Vec<QueryTest<'a>>,
-    }
-
-    impl<'a> QueryTester<'a> {
+    impl<'a> MultiTester<'a> {
         pub fn new() -> Self {
             Self { tests: Vec::new() }
         }
 
-        pub fn add_test(&mut self, test: QueryTest<'a>) {
+        pub fn add_test(&mut self, test: Tester<'a>) {
             self.tests.push(test);
         }
 
@@ -389,14 +389,14 @@ mod test {
 
     #[test]
     fn decimal_digits() {
-        assert!(QueryTest::new(
+        assert!(Tester::new(
             "numeric literals",
             vec![Token {
                 loc: TokenLoc {
                     starts_at: 0,
                     len: 2,
                 },
-                con: TokenContent::NumberLiteral("91".to_string()),
+                con: TokenContent::Literal(TokenLiteral::NumberLiteral("91".to_string())),
             }],
             "91",
         )
@@ -406,7 +406,7 @@ mod test {
 
     #[test]
     fn multiple_tokens() {
-        assert!(QueryTest::new(
+        assert!(Tester::new(
             "multiple tokens",
             vec![
                 Token {
@@ -421,7 +421,7 @@ mod test {
                         starts_at: 2,
                         len: 2,
                     },
-                    con: TokenContent::NumberLiteral("91".to_string()),
+                    con: TokenContent::Literal(TokenLiteral::NumberLiteral("91".to_string())),
                 }
             ],
             "x 91",
@@ -432,14 +432,16 @@ mod test {
 
     #[test]
     fn string_literal() {
-        assert!(QueryTest::new(
+        assert!(Tester::new(
             "string literal",
             vec![Token {
                 loc: TokenLoc {
                     starts_at: 0,
                     len: 14,
                 },
-                con: TokenContent::StringLiteral("\"hello, world\"".to_string()),
+                con: TokenContent::Literal(TokenLiteral::StringLiteral(
+                    "\"hello, world\"".to_string()
+                )),
             }],
             "\"hello, world\"",
         )
@@ -449,40 +451,40 @@ mod test {
 
     #[test]
     fn lex_queries() {
-        let mut tester = QueryTester::new();
-        tester.add_test(QueryTest::new(
-            "create query",
+        let mut tester = MultiTester::new();
+        tester.add_test(Tester::new(
+            "view",
             vec![
                 Token {
                     loc: TokenLoc {
                         starts_at: 0,
-                        len: 5,
+                        len: 1,
                     },
-                    con: TokenContent::Anchor("#root".to_string()),
+                    con: TokenContent::TagAngleBracketLeft,
                 },
                 Token {
                     loc: TokenLoc {
-                        starts_at: 6,
-                        len: 6,
-                    },
-                    con: TokenContent::Insert,
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 13,
-                        len: 3,
-                    },
-                    con: TokenContent::New,
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 17,
+                        starts_at: 1,
                         len: 7,
                     },
-                    con: TokenContent::Identifier("Element".to_string()),
+                    con: TokenContent::Identifier("Element".into()),
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 8,
+                        len: 7,
+                    },
+                    con: TokenContent::Anchor("Anchor".into()),
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 16,
+                        len: 2,
+                    },
+                    con: TokenContent::TagAngleSelfClosingRight,
                 },
             ],
-            "#root insert new Element",
+            "<Element#anchor />",
         ));
 
         tester.run_all();
