@@ -205,19 +205,22 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
+    fn peek(&mut self) -> Option<&char> {
+        self.itr.peek()
+    }
     fn advance(&mut self) {
         self.next_char();
     }
 
-    fn next_char(&mut self) {
-        self.itr.next();
-
+    fn next_char(&mut self) -> Option<char> {
         self.current_idx += 1;
 
         if self.current_idx == MAX_IDX_VALUE {
             self.full_idx_count += 1;
             self.current_idx = 0;
         }
+
+        self.itr.next()
     }
 
     fn set_pending(&mut self, token: Token) -> TokenizationResult {
