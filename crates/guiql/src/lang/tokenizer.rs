@@ -52,7 +52,7 @@ impl<'a> Tokenizer<'a> {
         loc.len = len;
         Ok(Token {
             loc,
-            con: TokenContent::NumberLiteral(literal),
+            con: TokenContent::Literal(TokenLiteral::NumberLiteral(literal)),
         })
     }
 
@@ -62,25 +62,25 @@ impl<'a> Tokenizer<'a> {
             starts_at: self.current_idx,
             len: 0,
         };
+
         let mut quotation_mark_count = 0;
-        while let Some(&c) = self.itr.peek() {
-            literal.push(c);
-            self.advance();
-            loc.len += 1;
+        while let Some(c) = self.next_char() {
             if c == '\"' {
                 if quotation_mark_count >= 2 {
                     break;
                 }
                 quotation_mark_count += 1;
             }
+            literal.push(c);
         }
 
         if quotation_mark_count < 2 {
             Err(TokenizerErr::UnterminatedStringLiteral)
         } else {
+            loc.len = self.current_idx - loc.starts_at + 1;
             Ok(Token {
                 loc,
-                con: TokenContent::StringLiteral(literal),
+                con: TokenContent::Literal(TokenLiteral::StringLiteral(literal)),
             })
         }
     }
@@ -91,12 +91,11 @@ impl<'a> Tokenizer<'a> {
             starts_at: self.current_idx,
             len: 0,
         };
-        while let Some(&c) = self.itr.peek() {
+        while let Some(c) = self.next_char() {
             if c.is_alphabetic() {
-                self.advance();
-                loc.len += 1;
                 word.push(c);
-                if let Some(con) = TokenContent::from_str(word.as_str()) {
+                if let Ok(con) = TokenContent::try_from(word.as_str()) {
+                    loc.len = self.current_idx - loc.starts_at + 1;
                     return Some(Ok(Token { loc, con }));
                 };
             } else {
@@ -145,9 +144,10 @@ impl<'a> Tokenizer<'a> {
             }
 
             word.push(c);
-            loc.len += 1;
-            self.itr.next();
+            self.advance();
         }
+
+        loc.len = self.current_idx - loc.starts_at + 1;
 
         Ok(Token {
             loc,
