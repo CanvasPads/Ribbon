@@ -276,15 +276,6 @@ impl<'a> Tokenizer<'a> {
                     return Some(Err(err));
                 }
             }
-            /*else if c.is_digit(10) {
-                return Some(self.lex_number_literal());
-            } else if c.is_alphabetic() {
-                return Some(self.lex_alphabetical_chars());
-            } else if c == '"' {
-                return Some(self.lex_string_literal());
-            } else if c == '@' {
-                return Some(self.lex_element_identifier());
-            }*/
         }
         None
     }
