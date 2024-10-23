@@ -235,7 +235,7 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    fn dispatch_char(&mut self, c: char) -> TokenizationResult {
+    fn tokenize_char(&mut self, c: char) -> TokenizationResult {
         match c {
             'a'..='z' | 'A'..='Z' => {
                 let res = self.lex_alphabetical_chars();
@@ -264,7 +264,7 @@ impl<'a> Tokenizer<'a> {
                 continue;
             }
 
-            match self.dispatch_char(c) {
+            match self.tokenize_char(c) {
                 Ok(..) => {
                     if let Some(token) = self.pending.take() {
                         return Some(Ok(token));
