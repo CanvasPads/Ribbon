@@ -1,4 +1,4 @@
-use crate::lang::ast::{ASTLoc, ASTNodeModule, ASTNodeViewElement, TokenContent};
+use crate::lang::ast::{ASTLoc, ASTNodeModule, ASTNodeScoped, ASTNodeViewElement, TokenContent};
 use crate::lang::parser::{view::ViewParser, ParseError, ParseResult, Parser, TokenizeResult};
 use crate::lang::tokenizer::{TokenResult, Tokenizer};
 use std::cell::RefCell;
@@ -92,9 +92,11 @@ impl<'a> ModuleParser<'a> {
         }
     }
 
-    fn parse_view(&self) -> ParseResult<ASTNodeViewElement> {
+    fn parse_view_elements(&self) -> ParseResult<ASTNodeViewElement> {
         ViewParser::new(self.tokenizer.clone()).parse_all()
     }
+
+    fn parse_view(&self) -> ParseResult<ASTNodeScoped> {}
 
     fn parse_token(&self, res: TokenResult) {
         match res {
