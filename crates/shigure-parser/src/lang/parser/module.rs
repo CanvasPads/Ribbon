@@ -96,10 +96,12 @@ impl<'a> ModuleParser<'a> {
         ViewParser::new(self.tokenizer.clone()).parse_all()
     }
 
-    fn parse_view(&self) -> ParseResult<ASTNodeScoped> {}
+    fn parse_view(&self) -> ParseResult<ASTNodeScoped> {
+        todo!()
+    }
 
     fn parse_token(&self, res: TokenResult) {
-        match res {
+        /*match res {
             Ok(token) => match token.con {
                 TokenContent::Create => {
                     let res = self.parse_create();
@@ -108,7 +110,8 @@ impl<'a> ModuleParser<'a> {
                 _ => self.set_pending_err(ParseError::UnexpectedToken),
             },
             Err(err) => self.set_pending_err(ParseError::TokenizeError(err)),
-        }
+        }*/
+        todo!()
     }
 
     fn advance(&self) -> ModuleParserResult {

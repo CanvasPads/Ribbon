@@ -77,16 +77,7 @@ impl<'a> ViewParser<'a> {
     }
 
     fn parse_token(&self, res: TokenResult) {
-        match res {
-            Ok(token) => match token.con {
-                TokenContent::VTagStartPre { .. } => {
-                    let res = self.parse_xml_tag();
-                    self.set_state_from_parse_result(res);
-                }
-                _ => self.set_pending_err(ParseError::UnexpectedToken),
-            },
-            Err(err) => self.set_pending_err(ParseError::TokenizeError(err)),
-        }
+        todo!()
     }
 
     fn advance(&self) -> ViewParserResult {
