@@ -1,5 +1,5 @@
 [package]
-name = "guiql"
+name = "shigure-parser"
 version = { workspace = true }
 edition = "2021"
 
