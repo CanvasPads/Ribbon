@@ -1,6 +1,6 @@
 ![Shigure logo](./assets/logo.png)
 <h1 align="center">
-☔ Shigure ⏰
+Shigure 時雨
 </h1>
 
 <p align="center">
