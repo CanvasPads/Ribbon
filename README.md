@@ -1,6 +1,11 @@
-# ☔ 🎨 Shigure
+![Shigure logo](./assets/logo.png)
+<h1 align="center">
+☔ Shigure ⏰
+</h1>
 
+<p align="center">
 Shigure is a programming language for building user interfaces.
+</p>
 
 ## ✨ Getting started
 
