@@ -18,4 +18,4 @@ pub enum ParseError {
 }
 
 pub type ParseResult<T> = Result<T, ParseError>;
-type TokenizeResult = Result<Token, ParseError>;
+pub type TokenizeResult = Result<Token, ParseError>;
