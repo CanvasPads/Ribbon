@@ -261,16 +261,21 @@ impl<'a> Tokenizer<'a> {
                 self.set_pending_or_err(res)
             }
             '<' => {
-                // ViewElement starting tag
-                let loc = TokenLoc {
-                    starts_at: self.current_idx,
-                    len: 1,
-                };
-                let con = TokenContent::TagAngleBracketLeft;
+                let starts_at = self.current_idx;
+                if let Some('/') = self.advance() {
+                    let loc = TokenLoc { starts_at, len: 2 };
+                    let con = TokenContent::TagAngleClosingLeft;
 
-                self.consume_char();
+                    self.consume_char();
 
-                self.set_pending(Token { loc, con })
+                    return self.set_pending(Token { loc, con });
+                } else {
+                    // ViewElement starting tag
+                    self.set_pending(Token {
+                        loc: TokenLoc { starts_at, len: 1 },
+                        con: TokenContent::TagAngleBracketLeft,
+                    })
+                }
             }
             '>' => {
                 // ViewElement starting tag
@@ -299,6 +304,17 @@ impl<'a> Tokenizer<'a> {
                 } else {
                     Err(TokenizerErr::UnexpectedToken)
                 }
+            }
+            '=' => {
+                let loc = TokenLoc {
+                    starts_at: self.current_idx,
+                    len: 1,
+                };
+                let con = TokenContent::AssignmentOp;
+
+                self.consume_char();
+
+                self.set_pending(Token { loc, con })
             }
             '"' => {
                 let res = self.lex_string_literal();
@@ -380,6 +396,7 @@ mod test {
                                 "{}: Failed with tokenizer error\n- Error:\n{:?}",
                                 self.name, err
                             );
+                            println!("- Expected: {:?}", expected);
                             return Err(TesterErr::TokenizerError);
                         }
                     }
@@ -574,6 +591,27 @@ mod test {
                 Token {
                     loc: TokenLoc {
                         starts_at: 16,
+                        len: 16,
+                    },
+                    con: TokenContent::Identifier("x-attribute-name".into()),
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 32,
+                        len: 1,
+                    },
+                    con: TokenContent::AssignmentOp,
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 33,
+                        len: 7,
+                    },
+                    con: TokenContent::Literal(TokenLiteral::StringLiteral("\"value\"".into())),
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 41,
                         len: 2,
                     },
                     con: TokenContent::TagAngleSelfClosingRight,
@@ -609,9 +647,51 @@ mod test {
                 Token {
                     loc: TokenLoc {
                         starts_at: 16,
+                        len: 9,
+                    },
+                    con: TokenContent::Identifier("$sName_A2".into()),
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 25,
+                        len: 1,
+                    },
+                    con: TokenContent::AssignmentOp,
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 26,
+                        len: 6,
+                    },
+                    con: TokenContent::Literal(TokenLiteral::StringLiteral("\"$doc\"".into())),
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 32,
+                        len: 1,
+                    },
+                    con: TokenContent::TagAngleBracketRight,
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 33,
                         len: 2,
                     },
-                    con: TokenContent::TagAngleSelfClosingRight,
+                    con: TokenContent::TagAngleClosingLeft,
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 35,
+                        len: 7,
+                    },
+                    con: TokenContent::Identifier("Element".into()),
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 42,
+                        len: 1,
+                    },
+                    con: TokenContent::TagAngleBracketRight,
                 },
             ],
             "<Element#anchor $sName_A2=\"$doc\"></Element>",
