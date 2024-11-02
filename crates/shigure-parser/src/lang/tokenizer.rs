@@ -64,33 +64,32 @@ impl<'a> Tokenizer<'a> {
     }
 
     fn lex_string_literal(&mut self) -> TokenResult {
-        let mut literal = String::new();
+        let mut literal = String::from("\"");
         let mut loc = TokenLoc {
             starts_at: self.current_idx,
             len: 0,
         };
 
-        let mut quotation_mark_count = 0;
-        while let Some(c) = self.current {
-            if c == '\"' {
-                if quotation_mark_count >= 2 {
-                    break;
-                }
-                quotation_mark_count += 1;
-            }
-            literal.push(c);
-            self.consume_char();
+        if self.current != Some('"') {
+            return Err(TokenizerErr::UnexpectedToken);
         }
 
-        if quotation_mark_count < 2 {
-            Err(TokenizerErr::UnterminatedStringLiteral)
-        } else {
-            loc.len = self.current_idx - loc.starts_at;
-            Ok(Token {
-                loc,
-                con: TokenContent::Literal(TokenLiteral::StringLiteral(literal)),
-            })
+        self.consume_char();
+
+        while let Some(c) = self.current {
+            self.consume_char();
+            literal.push(c);
+
+            if c == '"' {
+                loc.len = self.current_idx - loc.starts_at;
+                return Ok(Token {
+                    loc,
+                    con: TokenContent::Literal(TokenLiteral::StringLiteral(literal)),
+                });
+            }
         }
+
+        Err(TokenizerErr::UnterminatedStringLiteral)
     }
 
     fn lex_reserved(&mut self) -> Option<TokenResult> {
