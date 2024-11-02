@@ -111,6 +111,8 @@ pub enum TokenContent {
     BraceRight,
     /// `<`
     TagAngleBracketLeft,
+    /// `</`
+    TagAngleClosingLeft,
     /// `/>`
     TagAngleSelfClosingRight,
     /// `>`
@@ -163,6 +165,7 @@ impl TryFrom<&str> for TokenContent {
     type Error = ();
     fn try_from(word: &str) -> Result<Self, Self::Error> {
         match word {
+            "</" => Ok(Self::TagAngleClosingLeft),
             "/>" => Ok(Self::TagAngleSelfClosingRight),
             "as" => Ok(Self::As),
             "const" => Ok(Self::Const),

@@ -150,11 +150,14 @@ impl<'a> Tokenizer<'a> {
                 break;
             }
             match c {
-                'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$' => {
+                'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$' | '-' => {
                     word.push(c);
                     self.consume_char();
                 }
                 _ => {
+                    if word.chars().last() == Some('-') {
+                        return Err(TokenizerErr::UnexpectedToken);
+                    };
                     break;
                 }
             }
@@ -511,7 +514,7 @@ mod test {
     fn lex_viewtag() {
         let mut tester = MultiTester::new();
         tester.add_test(Tester::new(
-            "view",
+            "view self closing tag",
             vec![
                 Token {
                     loc: TokenLoc {
@@ -543,6 +546,76 @@ mod test {
                 },
             ],
             "<Element#anchor />",
+        ));
+
+        tester.add_test(Tester::new(
+            "view attribute",
+            vec![
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 0,
+                        len: 1,
+                    },
+                    con: TokenContent::TagAngleBracketLeft,
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 1,
+                        len: 7,
+                    },
+                    con: TokenContent::Identifier("Element".into()),
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 8,
+                        len: 7,
+                    },
+                    con: TokenContent::Anchor("#anchor".into()),
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 16,
+                        len: 2,
+                    },
+                    con: TokenContent::TagAngleSelfClosingRight,
+                },
+            ],
+            "<Element#anchor x-attribute-name=\"value\" />",
+        ));
+
+        tester.add_test(Tester::new(
+            "view attribute",
+            vec![
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 0,
+                        len: 1,
+                    },
+                    con: TokenContent::TagAngleBracketLeft,
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 1,
+                        len: 7,
+                    },
+                    con: TokenContent::Identifier("Element".into()),
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 8,
+                        len: 7,
+                    },
+                    con: TokenContent::Anchor("#anchor".into()),
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 16,
+                        len: 2,
+                    },
+                    con: TokenContent::TagAngleSelfClosingRight,
+                },
+            ],
+            "<Element#anchor $sName_A2=\"$doc\"></Element>",
         ));
 
         tester.run_all();
