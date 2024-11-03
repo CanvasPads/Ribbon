@@ -697,6 +697,27 @@ mod test {
             "<Element#anchor $sName_A2=\"$doc\"></Element>",
         ));
 
+        tester.add_test(Tester::new(
+            "Selfclosing with no name",
+            vec![
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 0,
+                        len: 2,
+                    },
+                    con: TokenContent::TagAngleClosingLeft,
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 2,
+                        len: 1,
+                    },
+                    con: TokenContent::TagAngleBracketRight,
+                },
+            ],
+            "</>",
+        ));
+
         tester.run_all();
     }
 }
