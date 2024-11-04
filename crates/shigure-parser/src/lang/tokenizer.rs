@@ -283,11 +283,13 @@ impl<'a> Tokenizer<'a> {
                     starts_at: self.current_idx,
                     len: 1,
                 };
-                let con = TokenContent::TagAngleBracketRight;
 
                 self.consume_char();
 
-                self.set_pending(Token { loc, con })
+                self.set_pending(Token {
+                    loc,
+                    con: TokenContent::TagAngleBracketRight,
+                })
             }
             '/' => {
                 // Self-closing ViewElement tag
@@ -310,11 +312,11 @@ impl<'a> Tokenizer<'a> {
                     starts_at: self.current_idx,
                     len: 1,
                 };
-                let con = TokenContent::AssignmentOp;
-
                 self.consume_char();
-
-                self.set_pending(Token { loc, con })
+                self.set_pending(Token {
+                    loc,
+                    con: TokenContent::AssignmentOp,
+                })
             }
             '"' => {
                 let res = self.lex_string_literal();
