@@ -109,6 +109,10 @@ pub enum TokenContent {
     BraceLeft,
     /// `{`
     BraceRight,
+    /// `[`
+    SquareBracketLeft,
+    /// `]`
+    SquareBracketRight,
     /// `<`
     TagAngleBracketLeft,
     /// `</`

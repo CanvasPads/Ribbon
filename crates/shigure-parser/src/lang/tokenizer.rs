@@ -283,11 +283,11 @@ impl<'a> Tokenizer<'a> {
                     starts_at: self.current_idx,
                     len: 1,
                 };
-                let con = TokenContent::TagAngleBracketRight;
-
                 self.consume_char();
-
-                self.set_pending(Token { loc, con })
+                self.set_pending(Token {
+                    loc,
+                    con: TokenContent::TagAngleBracketRight,
+                })
             }
             '/' => {
                 // Self-closing ViewElement tag
@@ -310,11 +310,33 @@ impl<'a> Tokenizer<'a> {
                     starts_at: self.current_idx,
                     len: 1,
                 };
-                let con = TokenContent::AssignmentOp;
-
                 self.consume_char();
-
-                self.set_pending(Token { loc, con })
+                self.set_pending(Token {
+                    loc,
+                    con: TokenContent::AssignmentOp,
+                })
+            }
+            '[' => {
+                let loc = TokenLoc {
+                    starts_at: self.current_idx,
+                    len: 1,
+                };
+                self.consume_char();
+                self.set_pending(Token {
+                    loc,
+                    con: TokenContent::SquareBracketLeft,
+                })
+            }
+            ']' => {
+                let loc = TokenLoc {
+                    starts_at: self.current_idx,
+                    len: 1,
+                };
+                self.consume_char();
+                self.set_pending(Token {
+                    loc,
+                    con: TokenContent::SquareBracketRight,
+                })
             }
             '"' => {
                 let res = self.lex_string_literal();
@@ -521,6 +543,32 @@ mod test {
                 )),
             }],
             "\"hello, world\"",
+        )
+        .run()
+        .is_ok());
+    }
+
+    #[test]
+    fn square_brackets() {
+        assert!(Tester::new(
+            "square brackets",
+            vec![
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 0,
+                        len: 1,
+                    },
+                    con: TokenContent::SquareBracketLeft,
+                },
+                Token {
+                    loc: TokenLoc {
+                        starts_at: 1,
+                        len: 1,
+                    },
+                    con: TokenContent::SquareBracketRight,
+                }
+            ],
+            "[]",
         )
         .run()
         .is_ok());
