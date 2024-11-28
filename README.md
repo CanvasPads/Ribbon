@@ -4,7 +4,7 @@ Shigure 時雨
 </h1>
 
 <p align="center">
-Shigure is a programming language for building user interfaces.
+Shigure is a programming language for the wasm era.
 </p>
 
 ## ✨ Getting started
