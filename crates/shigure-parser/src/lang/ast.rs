@@ -1,76 +1,4 @@
-/// A location information for AST nodes.
-#[derive(Eq, PartialEq, Clone, Copy, Debug)]
-pub struct ASTLoc {
-    pub start: u32,
-    pub end: u32,
-}
-
-/// A node that has [`ASTLoc`] in own member.
-pub(crate) trait ASTHasLoc {
-    fn loc(&self) -> ASTLoc;
-}
-
-pub struct ASTNodeViewElement {
-    loc: ASTLoc,
-}
-
-impl ASTHasLoc for ASTNodeViewElement {
-    fn loc(&self) -> ASTLoc {
-        self.loc
-    }
-}
-
-#[derive(Eq, PartialEq, Clone, Debug)]
-pub struct ASTItemConst {
-    loc: ASTLoc,
-}
-
-impl ASTHasLoc for ASTItemConst {
-    fn loc(&self) -> ASTLoc {
-        self.loc
-    }
-}
-
-#[derive(Eq, PartialEq, Clone, Debug)]
-pub struct ASTItemView {
-    loc: ASTLoc,
-}
-
-impl ASTHasLoc for ASTItemView {
-    fn loc(&self) -> ASTLoc {
-        self.loc
-    }
-}
-
-/// AST nodes that possibly placement in a block
-#[derive(Eq, PartialEq, Clone, Debug)]
-pub enum ASTNodeScoped {
-    Const(ASTItemConst),
-    View(ASTItemView),
-}
-
-impl ASTHasLoc for ASTNodeScoped {
-    fn loc(&self) -> ASTLoc {
-        match self {
-            ASTNodeScoped::Const(i) => i.loc(),
-            ASTNodeScoped::View(i) => i.loc(),
-        }
-    }
-}
-
-/// A module node
-#[derive(Eq, PartialEq, Clone, Debug)]
-pub struct ASTNodeModule {
-    loc: ASTLoc,
-    pub name: String,
-    pub nodes: Vec<ASTNodeScoped>,
-}
-
-impl ASTHasLoc for ASTNodeModule {
-    fn loc(&self) -> ASTLoc {
-        self.loc
-    }
-}
+pub mod item;
 
 #[derive(Eq, PartialEq, Clone, Copy, Debug)]
 pub struct TokenLoc {
@@ -147,10 +75,10 @@ pub enum TokenContent {
     If,
     /// `import`
     Import,
+    /// `in`
+    In,
     /// `let`
     Let,
-    /// `nil`
-    Nil,
     /// `type`
     Type,
     /// `use`

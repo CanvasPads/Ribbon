@@ -350,6 +350,11 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
+    pub fn get_current_idx(&self) -> u32 {
+        self.current_idx
+    }
+
+    /// Continue tokenization unless there's no new token or error.
     pub fn next(&mut self) -> Option<TokenResult> {
         while let Some(c) = self.current {
             if c.is_whitespace() {

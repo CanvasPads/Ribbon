@@ -1,0 +1,5 @@
+type Fruit = variants {
+    Apple { color: variants { Red, Green } },
+    Banana,
+    Orange,
+}

@@ -3,5 +3,9 @@
 version = 3
 
 [[package]]
+name = "shigure-compiler"
+version = "0.0.0"
+
+[[package]]
 name = "shigure-parser"
 version = "0.0.0"
