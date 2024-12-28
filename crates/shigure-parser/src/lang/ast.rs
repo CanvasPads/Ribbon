@@ -23,11 +23,9 @@ impl TokenLiteral {
 
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum TokenContent {
-    /// `#anchor`
-    Anchor(String),
-    /// `variable_name, function_name, CONSTANT_VALUE, ObjectName`
+    /// `a_variable`, `a_function`, `CONSTANT_VALUE`, `TypeName`
     Identifier(String),
-    /// `"hello, world", 1, 0xdeadbeef`
+    /// `"hello, world"`, `2`, `0xdeadbeef`
     Literal(TokenLiteral),
     /// `(`
     ParenthesisLeft,
@@ -63,8 +61,6 @@ pub enum TokenContent {
     Effect,
     /// `else`
     Else,
-    /// `emits`
-    Emits,
     /// `fn`
     FnKeyword,
     /// `for`
@@ -73,22 +69,24 @@ pub enum TokenContent {
     FromKeyword,
     /// `if`
     If,
+    /// `impl`
+    Impl,
     /// `import`
     Import,
     /// `in`
     In,
+    /// `var`
+    Var,
     /// `let`
     Let,
+    /// `proto`
+    Proto,
     /// `type`
     Type,
+    /// `undefined`
+    Undefined,
     /// `use`
     Use,
-    /// `view`
-    View,
-    /// `when`
-    When,
-    /// `with`
-    With,
     /// `pub`
     Pub,
 }
@@ -103,19 +101,18 @@ impl TryFrom<&str> for TokenContent {
             "const" => Ok(Self::Const),
             "effect" => Ok(Self::Effect),
             "else" => Ok(Self::Else),
-            "emits" => Ok(Self::Emits),
             "fn" => Ok(Self::FnKeyword),
             "for" => Ok(Self::For),
             "from" => Ok(Self::FromKeyword),
             "if" => Ok(Self::If),
+            "impl" => Ok(Self::Impl),
             "import" => Ok(Self::Import),
+            "var" => Ok(Self::Var),
             "let" => Ok(Self::Let),
-            "nil" => Ok(Self::Nil),
+            "proto" => Ok(Self::Proto),
+            "undefined" => Ok(Self::Undefined),
             "type" => Ok(Self::Type),
             "use" => Ok(Self::Use),
-            "view" => Ok(Self::View),
-            "when" => Ok(Self::When),
-            "with" => Ok(Self::With),
             "pub" => Ok(Self::Pub),
             _ => Err(()),
         }
