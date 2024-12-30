@@ -1,5 +1,9 @@
-type Fruit = variants {
-    Apple { color: variants { Red, Green } },
+type Fruit = <
+    Apple { kind = < Red, Green > },
     Banana,
     Orange,
+>
+
+let main = {
+    (use io.printf)("{:?}", Fruit::Apple { kind = Red })
 }

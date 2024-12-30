@@ -1,0 +1,7 @@
+import io.println
+
+let main = {
+    let people = ["vim", "emacs", "vscode"]
+    let hello(name: string) = println("hello ", name, "!")
+    hello(people.join(" and "))
+}

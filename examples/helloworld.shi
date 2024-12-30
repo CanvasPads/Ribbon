@@ -1,7 +1,3 @@
 import io.println
 
-let main = {
-    let people = ["vim", "emacs"]
-    let hello(name: string) = println("hello ", name, "!")
-    hello(people.join(" and "))
-}
+let main = println("hello, world!")

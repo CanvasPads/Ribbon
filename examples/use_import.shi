@@ -1,0 +1,8 @@
+import io.println
+
+let main = {
+  println("hi")
+  let p = use io.println
+  p("hi")
+  (use io.println)("hi")
+}
