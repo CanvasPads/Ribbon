@@ -1,6 +1,10 @@
 [workspace]
 resolver = "2"
-members = [ "crates/shigure-compiler","crates/shigure-parser", "crates/shigure-test"]
+members = [
+  "crates/shigure-compiler",
+  "crates/shigure-parser",
+  "crates/shigure-test",
+]
 
 [workspace.package]
 version = "0.0.0"
