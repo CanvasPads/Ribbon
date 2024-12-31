@@ -3,10 +3,21 @@ use std::{cell::RefCell, iter::Peekable, str::Chars};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum TokenizerErr {
-    UnterminatedStringLiteral,
-    UnexpectedToken,
-    EmptyElementIdentifier,
-    InvalidElementIdentifier,
+    UnterminatedStringLiteral { loc: TokenLoc },
+    UnexpectedToken { loc: TokenLoc },
+    EmptyElementIdentifier { loc: TokenLoc },
+    InvalidElementIdentifier { loc: TokenLoc },
+}
+
+impl TokenizerErr {
+    pub fn loc(&self) -> TokenLoc {
+        match self {
+            Self::EmptyElementIdentifier { loc } => loc.clone(),
+            Self::UnexpectedToken { loc } => loc.clone(),
+            Self::UnterminatedStringLiteral { loc } => loc.clone(),
+            Self::InvalidElementIdentifier { loc } => loc.clone(),
+        }
+    }
 }
 
 pub type TokenResult = Result<Token, TokenizerErr>;
@@ -35,6 +46,13 @@ impl<'a> Tokenizer<'a> {
             }
         } else {
             panic!("tokenizer may got zero size string")
+        }
+    }
+
+    pub fn get_current_loc(&mut self) -> TokenLoc {
+        TokenLoc {
+            starts_at: self.current_idx,
+            len: 0,
         }
     }
 
@@ -71,7 +89,7 @@ impl<'a> Tokenizer<'a> {
         };
 
         if self.current != Some('"') {
-            return Err(TokenizerErr::UnexpectedToken);
+            return Err(TokenizerErr::UnexpectedToken { loc });
         }
 
         self.consume_char();
@@ -89,7 +107,7 @@ impl<'a> Tokenizer<'a> {
             }
         }
 
-        Err(TokenizerErr::UnterminatedStringLiteral)
+        Err(TokenizerErr::UnterminatedStringLiteral { loc })
     }
 
     fn lex_reserved(&mut self) -> Option<TokenResult> {
@@ -139,7 +157,7 @@ impl<'a> Tokenizer<'a> {
                     word = s.to_string();
                 }
                 _ => {
-                    return Err(TokenizerErr::UnexpectedToken);
+                    return Err(TokenizerErr::UnexpectedToken { loc });
                 }
             }
         };
@@ -155,7 +173,7 @@ impl<'a> Tokenizer<'a> {
                 }
                 _ => {
                     if word.chars().last() == Some('-') {
-                        return Err(TokenizerErr::UnexpectedToken);
+                        return Err(TokenizerErr::UnexpectedToken { loc });
                     };
                     break;
                 }
@@ -175,46 +193,6 @@ impl<'a> Tokenizer<'a> {
             return token;
         } else {
             return self.lex_identifier();
-        }
-    }
-
-    fn lex_anchor(&mut self) -> TokenResult {
-        if let Some(c) = self.current {
-            let mut loc = TokenLoc {
-                starts_at: self.current_idx,
-                len: 0,
-            };
-            if c != '#' {
-                return Err(TokenizerErr::InvalidElementIdentifier);
-            }
-
-            let mut identifier = String::new();
-
-            identifier.push(c);
-            loc.len += 1;
-
-            while let Some(c) = self.advance() {
-                if c.is_whitespace() {
-                    break;
-                } else if c.is_alphabetic() {
-                    identifier.push(c);
-                } else {
-                    break;
-                }
-
-                loc.len += 1;
-            }
-
-            if identifier.is_empty() {
-                return Err(TokenizerErr::EmptyElementIdentifier);
-            }
-
-            return Ok(Token {
-                loc,
-                con: TokenContent::Anchor(identifier),
-            });
-        } else {
-            return Err(TokenizerErr::InvalidElementIdentifier);
         }
     }
 
@@ -302,7 +280,11 @@ impl<'a> Tokenizer<'a> {
 
                     self.set_pending(Token { loc, con })
                 } else {
-                    Err(TokenizerErr::UnexpectedToken)
+                    let loc = TokenLoc {
+                        starts_at: self.current_idx - 1,
+                        len: 0,
+                    };
+                    Err(TokenizerErr::UnexpectedToken { loc })
                 }
             }
             '=' => {
@@ -342,11 +324,12 @@ impl<'a> Tokenizer<'a> {
                 let res = self.lex_string_literal();
                 self.set_pending_or_err(res)
             }
-            '#' => {
-                let res = self.lex_anchor();
-                self.set_pending_or_err(res)
-            }
-            _ => Err(TokenizerErr::UnexpectedToken),
+            _ => Err(TokenizerErr::UnexpectedToken {
+                loc: TokenLoc {
+                    starts_at: self.current_idx,
+                    len: 0,
+                },
+            }),
         }
     }
 
@@ -582,173 +565,6 @@ mod test {
     #[test]
     fn lex_viewtag() {
         let mut tester = MultiTester::new();
-        tester.add_test(Tester::new(
-            "view self closing tag",
-            vec![
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 0,
-                        len: 1,
-                    },
-                    con: TokenContent::TagAngleBracketLeft,
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 1,
-                        len: 7,
-                    },
-                    con: TokenContent::Identifier("Element".into()),
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 8,
-                        len: 7,
-                    },
-                    con: TokenContent::Anchor("#anchor".into()),
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 16,
-                        len: 2,
-                    },
-                    con: TokenContent::TagAngleSelfClosingRight,
-                },
-            ],
-            "<Element#anchor />",
-        ));
-
-        tester.add_test(Tester::new(
-            "view attribute",
-            vec![
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 0,
-                        len: 1,
-                    },
-                    con: TokenContent::TagAngleBracketLeft,
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 1,
-                        len: 7,
-                    },
-                    con: TokenContent::Identifier("Element".into()),
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 8,
-                        len: 7,
-                    },
-                    con: TokenContent::Anchor("#anchor".into()),
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 16,
-                        len: 16,
-                    },
-                    con: TokenContent::Identifier("x-attribute-name".into()),
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 32,
-                        len: 1,
-                    },
-                    con: TokenContent::AssignmentOp,
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 33,
-                        len: 7,
-                    },
-                    con: TokenContent::Literal(TokenLiteral::StringLiteral("\"value\"".into())),
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 41,
-                        len: 2,
-                    },
-                    con: TokenContent::TagAngleSelfClosingRight,
-                },
-            ],
-            "<Element#anchor x-attribute-name=\"value\" />",
-        ));
-
-        tester.add_test(Tester::new(
-            "view attribute",
-            vec![
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 0,
-                        len: 1,
-                    },
-                    con: TokenContent::TagAngleBracketLeft,
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 1,
-                        len: 7,
-                    },
-                    con: TokenContent::Identifier("Element".into()),
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 8,
-                        len: 7,
-                    },
-                    con: TokenContent::Anchor("#anchor".into()),
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 16,
-                        len: 9,
-                    },
-                    con: TokenContent::Identifier("$sName_A2".into()),
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 25,
-                        len: 1,
-                    },
-                    con: TokenContent::AssignmentOp,
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 26,
-                        len: 6,
-                    },
-                    con: TokenContent::Literal(TokenLiteral::StringLiteral("\"$doc\"".into())),
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 32,
-                        len: 1,
-                    },
-                    con: TokenContent::TagAngleBracketRight,
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 33,
-                        len: 2,
-                    },
-                    con: TokenContent::TagAngleClosingLeft,
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 35,
-                        len: 7,
-                    },
-                    con: TokenContent::Identifier("Element".into()),
-                },
-                Token {
-                    loc: TokenLoc {
-                        starts_at: 42,
-                        len: 1,
-                    },
-                    con: TokenContent::TagAngleBracketRight,
-                },
-            ],
-            "<Element#anchor $sName_A2=\"$doc\"></Element>",
-        ));
 
         tester.add_test(Tester::new(
             "Selfclosing with no name",
