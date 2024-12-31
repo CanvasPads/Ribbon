@@ -2,8 +2,10 @@ type Fruit = <
     Apple { kind = < Red, Green > },
     Banana,
     Orange,
->
+> {
+    variety: string
+}
 
 let main = {
-    (use io.printf)("{:?}", Fruit::Apple { kind = Red })
+    (use io.printf)("{:?}", Fruit::Apple { kind = Red, variety = "Fuji" })
 }
