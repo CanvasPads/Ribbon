@@ -2,15 +2,10 @@
 resolver = "2"
 members = [
   "crates/shigure-compiler",
+  "crates/shigure-log",
   "crates/shigure-parser",
   "crates/shigure-test",
 ]
 
 [workspace.package]
 version = "0.0.0"
-
-[workspace.dependencies]
-winit = "0.30"
-wnd = { git = "https://github.com/shigurers/wnd" }
-guiql = { path = "crates/guiql" }
-tokio = { version = "1.40" }
