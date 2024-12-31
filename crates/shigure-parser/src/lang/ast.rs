@@ -53,8 +53,12 @@ pub enum TokenContent {
     AssignmentOp,
     /// `&`
     BitwiseAndOp,
-    /// as
+    /// `as`
     As,
+    /// `async`
+    Async,
+    /// `await`
+    Await,
     /// `const`
     Const,
     /// `effect`
@@ -69,8 +73,8 @@ pub enum TokenContent {
     FromKeyword,
     /// `if`
     If,
-    /// `impl`
-    Impl,
+    /// `implement`
+    Implement,
     /// `import`
     Import,
     /// `in`
@@ -79,8 +83,8 @@ pub enum TokenContent {
     Var,
     /// `let`
     Let,
-    /// `proto`
-    Proto,
+    /// `protocol`
+    Protocol,
     /// `type`
     Type,
     /// `undefined`
@@ -98,6 +102,8 @@ impl TryFrom<&str> for TokenContent {
             "</" => Ok(Self::TagAngleClosingLeft),
             "/>" => Ok(Self::TagAngleSelfClosingRight),
             "as" => Ok(Self::As),
+            "async" => Ok(Self::Async),
+            "await" => Ok(Self::Await),
             "const" => Ok(Self::Const),
             "effect" => Ok(Self::Effect),
             "else" => Ok(Self::Else),
@@ -105,11 +111,11 @@ impl TryFrom<&str> for TokenContent {
             "for" => Ok(Self::For),
             "from" => Ok(Self::FromKeyword),
             "if" => Ok(Self::If),
-            "impl" => Ok(Self::Impl),
+            "implement" => Ok(Self::Implement),
             "import" => Ok(Self::Import),
             "var" => Ok(Self::Var),
             "let" => Ok(Self::Let),
-            "proto" => Ok(Self::Proto),
+            "protocol" => Ok(Self::Protocol),
             "undefined" => Ok(Self::Undefined),
             "type" => Ok(Self::Type),
             "use" => Ok(Self::Use),
