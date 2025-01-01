@@ -190,6 +190,7 @@ name = "shigure-parser"
 version = "0.0.0"
 dependencies = [
  "serde",
+ "shigure-log",
 ]
 
 [[package]]
