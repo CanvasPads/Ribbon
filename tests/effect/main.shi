@@ -1,0 +1,37 @@
+import io.println
+
+effect Exception = <DivByZero>
+
+let divide_effect(dividend: u32, divisor: u32): u32 with Exception = {
+  if divisor == 0 {
+    => Exception::DivByZero
+  } else {
+    => dividend / divisor
+  }
+}
+
+/*
+let main = {
+  divide_effect(24, 0) // Error: main couldn't catch Exception
+}
+*/
+
+let divide with Exception = {
+  println(divide_effect(1, 1))
+  println(divide_effect(16, 2))
+  println(divide_effect(2, 0))
+}
+
+let main = {
+  handle {
+    println(divide_effect(3, 1))
+    println(divide_effect(8, 2))
+    println(divide_effect(24, 0))
+  } match e {
+    Exception::DivByZero => println("Division by zero")
+  }
+
+  handle divide() match e {
+    Exception::DivByZero => println("Division by zero")
+  }
+}

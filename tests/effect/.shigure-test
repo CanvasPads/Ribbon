@@ -1,0 +1,6 @@
+{
+  "file": "./main.shi",
+  "module": "main",
+  "stdout": "./output",
+  "ast": "./ast"
+}

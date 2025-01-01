@@ -1,0 +1,23 @@
+import io.println
+import result.{Result, Ok, Err}
+
+let divide_result(dividend: u32, divisor: u32): Result(u32, <DivByZero>) {
+  if divisor == 0 {
+    => Err(::DivByZero)
+  } else {
+    => Ok(dividend / divisor)
+  }
+}
+
+/*
+let main = {
+  divide_result(24, 0) // Error: Ignoring the result
+}
+*/
+
+let main = {
+  match divide_result(24, 0) {
+    Ok(res) => println(res),
+    Err(..) => println("Division by zero"),
+  }
+}

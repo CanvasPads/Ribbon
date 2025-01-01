@@ -61,6 +61,8 @@ pub enum TokenContent {
     Await,
     /// `const`
     Const,
+    /// `defer`
+    Defer,
     /// `effect`
     Effect,
     /// `else`
@@ -71,6 +73,8 @@ pub enum TokenContent {
     For,
     /// `from`
     FromKeyword,
+    /// `handle`
+    Handle,
     /// `if`
     If,
     /// `implement`
@@ -93,6 +97,8 @@ pub enum TokenContent {
     Use,
     /// `pub`
     Pub,
+    /// `with`
+    With,
 }
 
 impl TryFrom<&str> for TokenContent {
@@ -105,11 +111,13 @@ impl TryFrom<&str> for TokenContent {
             "async" => Ok(Self::Async),
             "await" => Ok(Self::Await),
             "const" => Ok(Self::Const),
+            "defer" => Ok(Self::Defer),
             "effect" => Ok(Self::Effect),
             "else" => Ok(Self::Else),
             "fn" => Ok(Self::FnKeyword),
             "for" => Ok(Self::For),
             "from" => Ok(Self::FromKeyword),
+            "handle" => Ok(Self::Handle),
             "if" => Ok(Self::If),
             "implement" => Ok(Self::Implement),
             "import" => Ok(Self::Import),
@@ -120,6 +128,7 @@ impl TryFrom<&str> for TokenContent {
             "type" => Ok(Self::Type),
             "use" => Ok(Self::Use),
             "pub" => Ok(Self::Pub),
+            "with" => Ok(Self::With),
             _ => Err(()),
         }
     }
