@@ -34,7 +34,7 @@ pub struct Tokenizer<'a> {
 const MAX_IDX_VALUE: u32 = u32::MAX;
 
 impl<'a> Tokenizer<'a> {
-    pub fn new(input: &'a str) -> Self {
+    pub fn new(input: &'a String) -> Self {
         let mut itr = input.chars().peekable();
         if let Some(char0) = itr.next() {
             Self {
@@ -389,7 +389,8 @@ mod test {
         }
 
         pub fn run(&self) -> TesterResult {
-            let mut tokenizer = Tokenizer::new(self.query);
+            let query = self.query.to_string();
+            let mut tokenizer = Tokenizer::new(&query);
             let mut expected_itr = self.expected.clone().into_iter();
 
             while let Some(expected) = expected_itr.next() {
