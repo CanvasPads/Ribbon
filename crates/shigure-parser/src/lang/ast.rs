@@ -87,6 +87,8 @@ pub enum TokenContent {
     Var,
     /// `let`
     Let,
+    /// `match`
+    Match,
     /// `protocol`
     Protocol,
     /// `type`
@@ -123,6 +125,7 @@ impl TryFrom<&str> for TokenContent {
             "import" => Ok(Self::Import),
             "var" => Ok(Self::Var),
             "let" => Ok(Self::Let),
+            "match" => Ok(Self::Match),
             "protocol" => Ok(Self::Protocol),
             "undefined" => Ok(Self::Undefined),
             "type" => Ok(Self::Type),
