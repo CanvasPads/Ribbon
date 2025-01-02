@@ -2,8 +2,8 @@ pub mod item;
 
 #[derive(Eq, PartialEq, Clone, Copy, Debug)]
 pub struct TokenLoc {
-    pub starts_at: u32,
-    pub len: u32,
+    pub starts_at: usize,
+    pub len: usize,
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]

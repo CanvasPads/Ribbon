@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 /// A location information for  nodes
 #[derive(Eq, PartialEq, Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Loc {
-    pub start: u32,
-    pub end: u32,
+    pub start: usize,
+    pub end: usize,
 }
 
 impl From<TokenLoc> for Loc {

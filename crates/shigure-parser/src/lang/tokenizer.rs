@@ -26,12 +26,12 @@ pub type TokenizationResult = Result<(), TokenizerErr>;
 pub struct Tokenizer<'a> {
     itr: Peekable<Chars<'a>>,
     pending: RefCell<Option<Token>>,
-    current_idx: u32,
-    full_idx_count: u32,
+    current_idx: usize,
+    full_idx_count: usize,
     current: Option<char>,
 }
 
-const MAX_IDX_VALUE: u32 = u32::MAX;
+const MAX_IDX_VALUE: usize = usize::MAX;
 
 impl<'a> Tokenizer<'a> {
     pub fn new(input: &'a String) -> Self {
@@ -333,7 +333,7 @@ impl<'a> Tokenizer<'a> {
         }
     }
 
-    pub fn get_current_idx(&self) -> u32 {
+    pub fn get_current_idx(&self) -> usize {
         self.current_idx
     }
 
