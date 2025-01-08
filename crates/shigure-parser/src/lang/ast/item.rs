@@ -43,6 +43,12 @@ pub struct NodeArray {
     pub values: Vec<NodeValue>,
 }
 
+#[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
+pub struct NodeNamespace {
+    pub name: NodeIdentifier,
+    pub child: Option<Box<NodeNamespace>>,
+}
+
 pub struct NodeBlock {}
 
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]

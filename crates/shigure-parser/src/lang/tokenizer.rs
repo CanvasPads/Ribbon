@@ -238,6 +238,17 @@ impl<'a> Tokenizer<'a> {
                 let res = self.lex_number_literal();
                 self.set_pending_or_err(res)
             }
+            '.' => {
+                let loc = TokenLoc {
+                    starts_at: self.current_idx,
+                    len: 1,
+                };
+                self.consume_char();
+                self.set_pending(Token {
+                    loc,
+                    con: TokenContent::Dot,
+                })
+            }
             '<' => {
                 let starts_at = self.current_idx;
                 if let Some('/') = self.advance() {
@@ -341,6 +352,10 @@ impl<'a> Tokenizer<'a> {
     pub fn next(&mut self) -> Option<TokenResult> {
         while let Some(c) = self.current {
             if c.is_whitespace() {
+                self.consume_char();
+                continue;
+            }
+            if c == '\n' {
                 self.consume_char();
                 continue;
             }

@@ -27,6 +27,8 @@ pub enum TokenContent {
     Identifier(String),
     /// `"hello, world"`, `2`, `0xdeadbeef`
     Literal(TokenLiteral),
+    /// `.`
+    Dot,
     /// `(`
     ParenthesisLeft,
     /// `)`
@@ -89,6 +91,8 @@ pub enum TokenContent {
     Let,
     /// `match`
     Match,
+    /// `opaque`
+    Opaque,
     /// `protocol`
     Protocol,
     /// `type`
@@ -126,6 +130,7 @@ impl TryFrom<&str> for TokenContent {
             "var" => Ok(Self::Var),
             "let" => Ok(Self::Let),
             "match" => Ok(Self::Match),
+            "opaque" => Ok(Self::Opaque),
             "protocol" => Ok(Self::Protocol),
             "undefined" => Ok(Self::Undefined),
             "type" => Ok(Self::Type),
@@ -146,6 +151,7 @@ impl TryFrom<char> for TokenContent {
             '{' => Ok(Self::BraceLeft),
             '}' => Ok(Self::BraceRight),
             '=' => Ok(Self::AssignmentOp),
+            '.' => Ok(Self::Dot),
             _ => Err(()),
         }
     }
