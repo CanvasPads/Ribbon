@@ -1,14 +1,23 @@
+use std::fmt::Debug;
+
+use shigure_log::{Logger, Message, MessageLevel};
+
 use crate::lang::{
     ast::{
-        item::{Loc, NodeAssignmentOp, NodeFile, NodeIdentifier, NodeModule},
-        Token, TokenContent, TokenLoc,
+        item::{
+            Loc, NodeAssignmentOp, NodeFile, NodeIdentifier, NodeModule, NodeNamespace,
+            NodeParameter, NodeScoped, NodeStringLiteral, NodeStructured, NodeValue,
+        },
+        Token, TokenContent,
     },
     tokenizer::{TokenResult, Tokenizer, TokenizerErr},
 };
 
 pub struct Parser<'a> {
-    filename: String,
+    filename: &'a String,
     tokenizer: Tokenizer<'a>,
+    logger: Logger<'a>,
+    previous: Option<TokenResult>,
     current: Option<TokenResult>,
 }
 
@@ -19,12 +28,15 @@ pub enum ParseError {
 pub type ParseResult<T> = Result<T, ParseError>;
 
 impl<'a> Parser<'a> {
-    pub fn new(filename: String, input: &'a str) -> Self {
+    pub fn new(filename: &'a String, input: &'a String) -> Self {
         let mut tokenizer = Tokenizer::new(input);
+        let logger = Logger::new(filename, input);
         let current = tokenizer.next();
         Parser {
             filename,
             tokenizer,
+            logger,
+            previous: None,
             current,
         }
     }
