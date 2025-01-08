@@ -39,9 +39,7 @@ impl<'a> From<TestFile> for Test {
 
 fn run_test(dir: &Path, test: Test, overwrite_ast: bool) {
     let program_file = dir.join(&test.file);
-    let program_file_name = program_file
-        .file_name()
-        .expect("Invalid file name")
+    let program_file_name = &program_file
         .to_str()
         .expect("Invalid file name")
         .to_string();
