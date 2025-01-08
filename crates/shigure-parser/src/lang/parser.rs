@@ -152,12 +152,72 @@ impl<'a> Parser<'a> {
                 let ident = self.expect_identifier()?;
                 Ok(NodeValue::Identifier(ident))
             }
-
-            _ => Err(ParseError::SyntaxError),
+            _ => Err(self.syntax_error("Invalid value", tok.loc.into())),
         }
     }
 
-    fn parse_module(&mut self) -> ParseResult<NodeModule> {
+    fn try_parsing_string_literal(&mut self) -> ParseResult<Option<NodeStringLiteral>> {
+        let tok = self.unwrap_current()?;
+        match tok.con {
+            TokenContent::Literal(l) => match l {
+                super::ast::TokenLiteral::StringLiteral(l) => Ok(Some(NodeStringLiteral {
+                    loc: tok.loc.into(),
+                    value: l,
+                })),
+                _ => Err(ParseError::SyntaxError {
+                    loc: tok.loc.into(),
+                }),
+            },
+            _ => Ok(None),
+        }
+    }
+
+    #[allow(unused)]
+    fn expect_string_literal(&mut self) -> ParseResult<NodeStringLiteral> {
+        if let Some(node) = self.try_parsing_string_literal()? {
+            Ok(node)
+        } else {
+            let loc = self.tokenizer.get_current_loc();
+            Err(self.syntax_error("Invalid string literal", loc.into()))
+        }
+    }
+
+    fn is_next_up_dot(&mut self) -> ParseResult<bool> {
+        Ok(self.unwrap_current()?.con == TokenContent::Dot)
+    }
+
+    fn _try_parse_namespace(&mut self) -> ParseResult<Option<NodeNamespace>> {
+        if let Some(ident) = self.try_parsing_identifier()? {
+            let name = ident;
+            let mut child = None;
+            self.consume_token();
+            if self.is_next_up_dot()? {
+                self.consume_token();
+                if let Some(ns) = self._try_parse_namespace()? {
+                    child = Some(Box::new(ns));
+                } else {
+                    return Ok(None);
+                }
+            }
+            Ok(Some(NodeNamespace { name, child }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn try_parsing_namespace(&mut self) -> ParseResult<Option<NodeNamespace>> {
+        self._try_parse_namespace()
+    }
+
+    fn try_parsing_params(&mut self) -> ParseResult<Option<Vec<NodeParameter>>> {
+        todo!()
+    }
+
+    fn expect_params(&mut self) -> ParseResult<Vec<NodeParameter>> {
+        todo!()
+    }
+
+    fn parse_module(&mut self, name: String) -> ParseResult<NodeModule> {
         let start = self.get_tokenizer_idx();
         let nodes: Vec<NodeScoped> = Vec::new();
         while let Some(res) = self.unwrap_current_or_none()? {
