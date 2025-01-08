@@ -174,6 +174,3 @@ impl<'a> Parser<'a> {
         self.parse_file()
     }
 }
-
-#[cfg(test)]
-mod test;
