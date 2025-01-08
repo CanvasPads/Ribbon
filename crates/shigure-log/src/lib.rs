@@ -114,9 +114,12 @@ impl<'a> Logger<'a> {
         }
         print!("   ");
         // ypos = \n
-        for _i in 0..xpos - ypos {
-            print!(" ");
+        if xpos > ypos {
+            for _i in 0..xpos - ypos {
+                print!(" ");
+            }
         }
+
         println!("^");
     }
 }
