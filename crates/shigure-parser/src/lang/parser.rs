@@ -21,8 +21,34 @@ pub struct Parser<'a> {
     current: Option<TokenResult>,
 }
 
+#[derive(Debug)]
+pub struct ParseMessageHint {}
+
+#[derive(Debug)]
+pub enum ParseMessageKind {
+    Error,
+    Warning,
+    Info,
+}
+
+pub struct ParseMessage {
+    kind: ParseMessageKind,
+    hints: Vec<ParseMessageHint>,
+}
+
+#[derive(Debug)]
 pub enum ParseError {
-    TokenizeError(TokenizerErr),
+    TokenizeError { loc: Loc, error: TokenizerErr },
+    SyntaxError { loc: Loc },
+}
+
+impl ParseError {
+    pub fn loc(&self) -> Loc {
+        match self {
+            Self::SyntaxError { loc, .. } => loc.clone(),
+            Self::TokenizeError { loc, .. } => loc.clone(),
+        }
+    }
 }
 
 pub type ParseResult<T> = Result<T, ParseError>;
@@ -41,8 +67,35 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Read the current token and parse it as an identifier.
-    fn expect_identifier(&mut self) -> ParseResult<NodeIdentifier> {
+    fn syntax_error(&self, title: &str, loc: Loc) -> ParseError {
+        let message = Message {
+            level: MessageLevel::Error,
+            pos: loc.start,
+            title: title.into(),
+            hints: vec![],
+        };
+        self.logger.issue(message);
+        ParseError::SyntaxError { loc }
+    }
+
+    fn tokenize_error(&self, error: TokenizerErr, loc: Loc) -> ParseError {
+        let title = match error.clone() {
+            TokenizerErr::UnexpectedToken { loc } => "Unexpected token",
+            TokenizerErr::UnterminatedStringLiteral { loc } => "Unterminated string",
+            _ => "Tokenizer error",
+        }
+        .to_string();
+        let message = Message {
+            level: MessageLevel::Error,
+            pos: loc.start,
+            title,
+            hints: vec![],
+        };
+        self.logger.issue(message);
+        ParseError::TokenizeError { loc, error }
+    }
+
+    fn try_parsing_identifier(&mut self) -> ParseResult<Option<NodeIdentifier>> {
         let tok = self.unwrap_current()?;
         if let TokenContent::Identifier(idef) = tok.con {
             Ok(NodeIdentifier {
