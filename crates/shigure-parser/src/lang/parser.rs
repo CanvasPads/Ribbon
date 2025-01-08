@@ -98,12 +98,22 @@ impl<'a> Parser<'a> {
     fn try_parsing_identifier(&mut self) -> ParseResult<Option<NodeIdentifier>> {
         let tok = self.unwrap_current()?;
         if let TokenContent::Identifier(idef) = tok.con {
-            Ok(NodeIdentifier {
+            Ok(Some(NodeIdentifier {
                 value: idef,
                 loc: tok.loc.into(),
-            })
+            }))
         } else {
-            Err(ParseError::SyntaxError)
+            Ok(None)
+        }
+    }
+
+    /// Read the current token and parse it as an identifier.
+    fn expect_identifier(&mut self) -> ParseResult<NodeIdentifier> {
+        let tok = self.unwrap_current()?;
+        if let Some(ident) = self.try_parsing_identifier()? {
+            Ok(ident)
+        } else {
+            Err(self.syntax_error("Invalid identifier", tok.loc.into()))
         }
     }
 
@@ -114,28 +124,31 @@ impl<'a> Parser<'a> {
                 loc: tok.loc.into(),
             })
         } else {
-            Err(ParseError::SyntaxError)
+            Err(ParseError::SyntaxError {
+                loc: tok.loc.into(),
+            })
         }
     }
 
     fn expect_structured(&mut self) -> ParseResult<NodeStructured> {
-        match self.unwrap_current()?.con {
+        let tok = self.unwrap_current()?;
+        match tok.con {
             TokenContent::BraceLeft => loop {
                 self.consume_token();
-                let tok = self.unwrap_current()?;
             },
-            _ => Err(ParseError::SyntaxError),
+            _ => Err(self.syntax_error("Invalid structured", tok.loc.into())),
         }
     }
 
     /// Parse value such as structs, variables and more
     fn expect_value(&mut self) -> ParseResult<NodeValue> {
-        match self.unwrap_current()?.con {
+        let tok = self.unwrap_current()?;
+        match tok.con {
             TokenContent::BraceLeft => {
-                let structured = self.expect_structred()?;
+                let structured = self.expect_structured()?;
                 Ok(NodeValue::Structured(structured))
             }
-            TokenContent::Identifier => {
+            TokenContent::Identifier(..) => {
                 let ident = self.expect_identifier()?;
                 Ok(NodeValue::Identifier(ident))
             }
@@ -146,6 +159,7 @@ impl<'a> Parser<'a> {
 
     fn parse_module(&mut self) -> ParseResult<NodeModule> {
         let start = self.get_tokenizer_idx();
+        let nodes: Vec<NodeScoped> = Vec::new();
         while let Some(res) = self.unwrap_current_or_none()? {
             match res.con {
                 TokenContent::Let => {
@@ -154,7 +168,10 @@ impl<'a> Parser<'a> {
                     // <name>
                     let name = self.expect_identifier()?;
                     self.consume_token();
-                    // =
+                    // function parameters
+                    if let Ok(..) = self.expect_params() {
+                        self.consume_token();
+                    }
                     self.expect_assignment_op()?;
                     self.consume_token();
                     // <value>
@@ -164,31 +181,44 @@ impl<'a> Parser<'a> {
                 TokenContent::Import => {
                     // import
                     self.consume_token();
-                    // "<url>"
-                    if let Ok(tok) = self.expect_string_litral() {
-                        self.consume_token();
-                    // <item>
-                    } else if let Ok(tok) = self.expect_identifier() {
-                        self.consume_token();
+                    if let Some(tok) = self.try_parsing_string_literal()? {
+                        // "<url>"
+                    } else if let Some(tok) = self.try_parsing_namespace()? {
+                        // <item>
+                    } else {
+                        return Err(self.syntax_error("Unexpected value", res.loc.into()));
                     }
                 }
                 TokenContent::Identifier(ident) => {
                     // <identifier>
                     self.consume_token();
+                    let ident = self.expect_identifier()?;
                 }
-                _ => {}
+                _ => {
+                    self.consume_token();
+                }
             }
         }
+        Ok(NodeModule {
+            loc: Loc {
+                start,
+                end: self.get_tokenizer_idx(),
+            },
+            name,
+            nodes,
+        })
     }
 
     fn unwrap_current(&mut self) -> Result<Token, ParseError> {
-        if let Some(tok_res) = self.current.clone() {
-            match tok_res {
+        match self.current.clone() {
+            Some(tok_res) => match tok_res {
                 Ok(tok) => Ok(tok),
-                Err(err) => Err(ParseError::TokenizeError(err)),
+                Err(err) => Err(self.tokenize_error(err, err.loc().into())),
+            },
+            None => {
+                let loc = self.tokenizer.get_current_loc();
+                Err(self.syntax_error("Unterminated token", loc.into()))
             }
-        } else {
-            Err(ParseError::SyntaxError)
         }
     }
 
@@ -196,7 +226,7 @@ impl<'a> Parser<'a> {
         if let Some(tok_res) = self.current.clone() {
             match tok_res {
                 Ok(tok) => Ok(Some(tok)),
-                Err(err) => Err(ParseError::TokenizeError(err)),
+                Err(err) => Err(self.tokenize_error(err, err.loc().into())),
             }
         } else {
             Ok(None)
@@ -205,16 +235,18 @@ impl<'a> Parser<'a> {
 
     fn consume_token(&mut self) {
         let next = self.tokenizer.next();
+        let prev = self.current.clone();
+        self.previous = prev;
         self.current = next;
     }
 
-    fn get_tokenizer_idx(&self) -> u32 {
+    fn get_tokenizer_idx(&self) -> usize {
         self.tokenizer.get_current_idx()
     }
 
     fn parse_file(&mut self) -> ParseResult<NodeFile> {
         let start = self.get_tokenizer_idx();
-        let module = self.parse_module()?;
+        let module = self.parse_module("<file>".into())?;
         let end = self.get_tokenizer_idx();
         Ok(NodeFile {
             loc: Loc { start, end },
