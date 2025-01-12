@@ -1,4 +1,3 @@
-![Shigure logo](./assets/logo.png)
 <h1 align="center">
 Shigure 時雨
 </h1>
