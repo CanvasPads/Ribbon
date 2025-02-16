@@ -1,11 +1,11 @@
 <h1 align="center">
-Shigure 時雨
+🎀 The Ribbon Programming Language 🎀
 </h1>
 
 <p align="center">
-Shigure is a programming language for the wasm era.
+   The programming language built for web assembly.
 </p>
 
 ## ✨ Getting started
 
-See the [documentation](https://docs.shigure.app) or try on [playground](https://try.shigure.app).
+See the [documentation](https://ribbonlang.dev) or try on [playground](https://play.ribbonlang.dev).
