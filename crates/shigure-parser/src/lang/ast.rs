@@ -27,8 +27,12 @@ pub enum TokenContent {
     Identifier(String),
     /// `"hello, world"`, `2`, `0xdeadbeef`
     Literal(TokenLiteral),
+    /// `,`
+    Comma,
     /// `.`
     Dot,
+    /// `:`
+    Colon,
     /// `(`
     ParenthesisLeft,
     /// `)`
@@ -151,7 +155,9 @@ impl TryFrom<char> for TokenContent {
             '{' => Ok(Self::BraceLeft),
             '}' => Ok(Self::BraceRight),
             '=' => Ok(Self::AssignmentOp),
+            ',' => Ok(Self::Comma),
             '.' => Ok(Self::Dot),
+            ':' => Ok(Self::Colon),
             _ => Err(()),
         }
     }

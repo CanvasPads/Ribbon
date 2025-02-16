@@ -83,8 +83,47 @@ impl HasLoc for NodeIdentifier {
     }
 }
 
+pub struct NodeType {
+    pub loc: Loc,
+    pub name: NodeIdentifier,
+    pub params: Option<Vec<NodeParameter>>,
+}
+
+impl HasLoc for NodeType {
+    fn loc(&self) -> Loc {
+        self.loc
+    }
+}
+
+pub struct NodeTypeAnnotation {
+    pub loc: Loc,
+    pub type_: NodeType,
+}
+
+impl HasLoc for NodeTypeAnnotation {
+    fn loc(&self) -> Loc {
+        self.loc
+    }
+}
+
+/// (<argument?> = <value>, ...)
+pub struct NodeFunctionCallingArg {
+    pub loc: Loc,
+    pub argument: Option<NodeIdentifier>,
+    pub value: NodeValue,
+}
+
+impl HasLoc for NodeFunctionCallingArg {
+    fn loc(&self) -> Loc {
+        self.loc
+    }
+}
+
+/// (<name>: <type annotation?>, ...)
 pub struct NodeParameter {
     pub loc: Loc,
+    pub name: NodeIdentifier,
+    pub type_anno: Option<NodeTypeAnnotation>,
 }
 
 impl HasLoc for NodeParameter {

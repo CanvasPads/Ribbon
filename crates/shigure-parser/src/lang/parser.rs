@@ -5,8 +5,9 @@ use shigure_log::{Logger, Message, MessageLevel};
 use crate::lang::{
     ast::{
         item::{
-            Loc, NodeAssignmentOp, NodeFile, NodeIdentifier, NodeModule, NodeNamespace,
-            NodeParameter, NodeScoped, NodeStringLiteral, NodeStructured, NodeValue,
+            Loc, NodeAssignmentOp, NodeFile, NodeFunctionCallingArg, NodeIdentifier, NodeModule,
+            NodeNamespace, NodeParameter, NodeScoped, NodeStringLiteral, NodeStructured, NodeType,
+            NodeTypeAnnotation, NodeValue,
         },
         Token, TokenContent,
     },
@@ -95,6 +96,22 @@ impl<'a> Parser<'a> {
         ParseError::TokenizeError { loc, error }
     }
 
+    fn is_next_up_dot(&mut self) -> ParseResult<bool> {
+        Ok(self.unwrap_current()?.con == TokenContent::Dot)
+    }
+
+    fn is_next_up_colon(&mut self) -> ParseResult<bool> {
+        Ok(self.unwrap_current()?.con == TokenContent::Colon)
+    }
+
+    fn is_next_up_assignment_op(&mut self) -> ParseResult<bool> {
+        Ok(self.unwrap_current()?.con == TokenContent::AssignmentOp)
+    }
+
+    fn is_next_up_comma(&mut self) -> ParseResult<bool> {
+        Ok(self.unwrap_current()?.con == TokenContent::Comma)
+    }
+
     fn try_parsing_identifier(&mut self) -> ParseResult<Option<NodeIdentifier>> {
         let tok = self.unwrap_current()?;
         if let TokenContent::Identifier(idef) = tok.con {
@@ -141,18 +158,28 @@ impl<'a> Parser<'a> {
     }
 
     /// Parse value such as structs, variables and more
-    fn expect_value(&mut self) -> ParseResult<NodeValue> {
+    fn try_parsing_value(&mut self) -> ParseResult<Option<NodeValue>> {
         let tok = self.unwrap_current()?;
         match tok.con {
             TokenContent::BraceLeft => {
                 let structured = self.expect_structured()?;
-                Ok(NodeValue::Structured(structured))
+                Ok(Some(NodeValue::Structured(structured)))
             }
             TokenContent::Identifier(..) => {
                 let ident = self.expect_identifier()?;
-                Ok(NodeValue::Identifier(ident))
+                Ok(Some(NodeValue::Identifier(ident)))
             }
-            _ => Err(self.syntax_error("Invalid value", tok.loc.into())),
+            _ => Ok(None),
+        }
+    }
+
+    fn expect_value(&mut self) -> ParseResult<NodeValue> {
+        match self.try_parsing_value()? {
+            Some(val) => Ok(val),
+            None => {
+                let loc = self.unwrap_current()?.loc;
+                Err(self.syntax_error("Invalid value", loc.into()))
+            }
         }
     }
 
@@ -182,10 +209,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn is_next_up_dot(&mut self) -> ParseResult<bool> {
-        Ok(self.unwrap_current()?.con == TokenContent::Dot)
-    }
-
     fn _try_parse_namespace(&mut self) -> ParseResult<Option<NodeNamespace>> {
         if let Some(ident) = self.try_parsing_identifier()? {
             let name = ident;
@@ -209,12 +232,133 @@ impl<'a> Parser<'a> {
         self._try_parse_namespace()
     }
 
-    fn try_parsing_params(&mut self) -> ParseResult<Option<Vec<NodeParameter>>> {
-        todo!()
+    fn try_parsing_type(&mut self) -> ParseResult<Option<NodeType>> {
+        let start = self.tokenizer.get_current_idx();
+        if let Some(name) = self.try_parsing_identifier()? {
+            self.consume_token();
+            let params = self.try_parsing_params()?;
+            Ok(Some(NodeType {
+                loc: Loc {
+                    start,
+                    end: self.tokenizer.get_current_idx(),
+                },
+                name,
+                params,
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
+    fn try_parsing_function_calling(&mut self) -> ParseResult<Option<Vec<NodeFunctionCallingArg>>> {
+        // (<argument?> = <value>, ...)
+        let tok = self.unwrap_current()?;
+        if let TokenContent::ParenthesisLeft = tok.con {
+            let mut params: Vec<NodeFunctionCallingArg> = Vec::new();
+
+            // Trying to parse each params.
+            loop {
+                self.consume_token();
+                if let Some(ident) = self.try_parsing_identifier()? {
+                    self.consume_token();
+                    if self.is_next_up_assignment_op()? {
+                        // An item for the specific argument.
+                        match self.try_parsing_value()? {
+                            Some(value) => params.push(NodeFunctionCallingArg {
+                                loc: self.tokenizer.get_current_loc().into(),
+                                argument: Some(ident),
+                                value,
+                            }),
+                            // Invalid syntax!
+                            None => return Ok(None),
+                        };
+                    } else {
+                        // In the case of putting identifier as an argument.
+                        params.push(NodeFunctionCallingArg {
+                            loc: self.tokenizer.get_current_loc().into(),
+                            argument: None,
+                            value: NodeValue::Identifier(ident),
+                        });
+                    }
+                } else if let Some(value) = self.try_parsing_value()? {
+                    params.push(NodeFunctionCallingArg {
+                        loc: self.tokenizer.get_current_loc().into(),
+                        argument: None,
+                        value,
+                    });
+                } else {
+                    return Ok(None);
+                }
+
+                self.consume_token();
+                if !self.is_next_up_comma()? {
+                    self.consume_token();
+                    break;
+                }
+            }
+            Ok(Some(params))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn try_parsing_type_anno(&mut self) -> ParseResult<Option<NodeTypeAnnotation>> {
+        let tok = self.unwrap_current()?;
+        let start = self.tokenizer.get_current_idx();
+        if self.is_next_up_colon()? {
+            if let Some(type_) = self.try_parsing_type()? {
+                return Ok(Some(NodeTypeAnnotation {
+                    loc: Loc {
+                        start,
+                        end: self.tokenizer.get_current_idx(),
+                    },
+                    type_,
+                }));
+            }
+        }
+        Ok(None)
+    }
+    /// (<value>: <type annotation?>, ...)
+    fn try_parsing_params(&mut self) -> ParseResult<Option<Vec<NodeParameter>>> {
+        let tok = self.unwrap_current()?;
+        if let TokenContent::ParenthesisLeft = tok.con {
+            let mut params: Vec<NodeParameter> = Vec::new();
+
+            // Trying to parse each params.
+            loop {
+                self.consume_token();
+                if let Some(ident) = self.try_parsing_identifier()? {
+                    self.consume_token();
+                    let type_anno = self.try_parsing_type_anno()?;
+                    self.consume_token();
+                    params.push(NodeParameter {
+                        loc: self.tokenizer.get_current_loc().into(),
+                        name: ident,
+                        type_anno,
+                    });
+                } else {
+                    return Ok(None);
+                }
+                if !self.is_next_up_comma()? {
+                    self.consume_token();
+                    break;
+                }
+            }
+
+            Ok(Some(params))
+        } else {
+            Ok(None)
+        }
+    }
+
+    #[allow(unused)]
     fn expect_params(&mut self) -> ParseResult<Vec<NodeParameter>> {
-        todo!()
+        let tok = self.unwrap_current()?;
+        if let Some(params) = self.try_parsing_params()? {
+            Ok(params)
+        } else {
+            Err(self.syntax_error("Invalid parameter", tok.loc.into()))
+        }
     }
 
     fn parse_module(&mut self, name: String) -> ParseResult<NodeModule> {
@@ -229,7 +373,7 @@ impl<'a> Parser<'a> {
                     let name = self.expect_identifier()?;
                     self.consume_token();
                     // function parameters
-                    if let Ok(..) = self.expect_params() {
+                    if let Some(..) = self.try_parsing_params()? {
                         self.consume_token();
                     }
                     self.expect_assignment_op()?;
@@ -237,12 +381,13 @@ impl<'a> Parser<'a> {
                     // <value>
                     let value = self.expect_value()?;
                     self.consume_token();
+                    nodes.push(value);
                 }
                 TokenContent::Import => {
                     // import
                     self.consume_token();
                     if let Some(tok) = self.try_parsing_string_literal()? {
-                        // "<url>"
+                        // "<path>"
                     } else if let Some(tok) = self.try_parsing_namespace()? {
                         // <item>
                     } else {

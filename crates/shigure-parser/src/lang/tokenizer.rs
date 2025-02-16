@@ -249,6 +249,50 @@ impl<'a> Tokenizer<'a> {
                     con: TokenContent::Dot,
                 })
             }
+            ',' => {
+                let loc = TokenLoc {
+                    starts_at: self.current_idx,
+                    len: 1,
+                };
+                self.consume_char();
+                self.set_pending(Token {
+                    loc,
+                    con: TokenContent::Comma,
+                })
+            }
+            ':' => {
+                let loc = TokenLoc {
+                    starts_at: self.current_idx,
+                    len: 1,
+                };
+                self.consume_char();
+                self.set_pending(Token {
+                    loc,
+                    con: TokenContent::Comma,
+                })
+            }
+            '(' => {
+                let loc = TokenLoc {
+                    starts_at: self.current_idx,
+                    len: 1,
+                };
+                self.consume_char();
+                self.set_pending(Token {
+                    loc,
+                    con: TokenContent::ParenthesisLeft,
+                })
+            }
+            ')' => {
+                let loc = TokenLoc {
+                    starts_at: self.current_idx,
+                    len: 1,
+                };
+                self.consume_char();
+                self.set_pending(Token {
+                    loc,
+                    con: TokenContent::ParenthesisRight,
+                })
+            }
             '<' => {
                 let starts_at = self.current_idx;
                 if let Some('/') = self.advance() {
