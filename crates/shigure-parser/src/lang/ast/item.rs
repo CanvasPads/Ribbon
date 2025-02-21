@@ -165,11 +165,23 @@ impl HasLoc for NodeView {
     }
 }
 
+#[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
+pub struct NodeLet {
+    pub loc: Loc,
+}
+
+impl HasLoc for NodeLet {
+    fn loc(&self) -> Loc {
+        self.loc
+    }
+}
+
 ///  nodes that possibly placement in a block
 #[derive(Eq, PartialEq, Clone, Debug, Serialize, Deserialize)]
 pub enum NodeScoped {
     Const(NodeConst),
     View(NodeView),
+    Let(NodeLet),
 }
 
 impl HasLoc for NodeScoped {
@@ -177,6 +189,7 @@ impl HasLoc for NodeScoped {
         match self {
             NodeScoped::Const(i) => i.loc(),
             NodeScoped::View(i) => i.loc(),
+            NodeScoped::Let(i) => i.loc(),
         }
     }
 }

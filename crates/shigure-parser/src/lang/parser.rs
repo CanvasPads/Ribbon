@@ -363,7 +363,7 @@ impl<'a> Parser<'a> {
 
     fn parse_module(&mut self, name: String) -> ParseResult<NodeModule> {
         let start = self.get_tokenizer_idx();
-        let nodes: Vec<NodeScoped> = Vec::new();
+        let mut nodes: Vec<NodeScoped> = Vec::new();
         while let Some(res) = self.unwrap_current_or_none()? {
             match res.con {
                 TokenContent::Let => {
@@ -381,7 +381,7 @@ impl<'a> Parser<'a> {
                     // <value>
                     let value = self.expect_value()?;
                     self.consume_token();
-                    nodes.push(value);
+                    nodes.push();
                 }
                 TokenContent::Import => {
                     // import
